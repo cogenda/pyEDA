@@ -5,7 +5,7 @@ Created on Jun 15, 2009
 '''
 __all__ = ['Point', 'Node', 'Edge', 'Cell', 'Elem', 'Region', 'Boundary', 'Interface']
 
-class Point:
+class Point(object):
     def __init__(self, pos):
         self.pos = pos
         
@@ -20,7 +20,7 @@ class Node(Point):
     def __str__(self):
         return "node("+str(self.pos)+")"
 
-class Edge:
+class Edge(object):
     def __init__(self, n1, n2):
         self.n1 = n1
         self.n2 = n2
@@ -34,7 +34,7 @@ class Edge:
 
 ############
 
-class Cell:
+class Cell(object):
     def __init__(self, node):
         self.node = node
         node.cells.append(self)
@@ -50,7 +50,7 @@ class Cell:
     def __str__(self):
         return "cell at "+str(self.node) 
     
-class Elem:
+class Elem(object):
     def __init__(self, cells):
         self.cells = cells
         self.region = None
@@ -67,7 +67,7 @@ class Elem:
     def gradient(self, vars):
         return 0.0
         
-class Region:
+class Region(object):
     def __init__(self, name=None, material=None):
         self.name = name
         self.material = material
@@ -84,7 +84,7 @@ class Region:
             s+=str(e) +","
         return s
     
-class Boundary:
+class Boundary(object):
     def __init__(self, name=None):
         self.name=name
         self.cells=[]
@@ -99,7 +99,7 @@ class Boundary:
             s+=str(c) +","
         return s
         
-class Interface:
+class Interface(object):
     def __init__(self, name=None):
         self.name=name
         self.cellPairs=[]

@@ -17,7 +17,7 @@ from AutoDeriv import *
 OPADD = 0
 OPSET = 1
 
-class NLEqnState:
+class NLEqnState(object):
     def __init__(self, n=0):
         self.N = n
         self.x = None
@@ -96,10 +96,9 @@ class NLEqnState:
         self.b = scipy.zeros(self.N)
         self.J = sparse.lil_matrix((self.N, self.N))
         
-class NLEqns:
+class NLEqns(object):
     def __init__(self):
         self.state = None
-        self.bcs = None
 
     def calcFunJac(self):
         pass
@@ -119,7 +118,7 @@ class NLEqns:
         return dx
     
     def solve(self):
-        maxiter=20
+        maxiter=10
         trace = True
         for iter in xrange(0,maxiter):
             self.state.clearFunJac()

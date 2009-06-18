@@ -9,10 +9,10 @@ import FVM1D as FVM
 import scipy
 import numpy as np
 
-class Mesh1D:
+class Mesh1D(object):
     def __init__(self, xx, rgns, bnds):
         # xx : coordinates of nodes
-        # rgns : [ (istart, iend, name, EqnPerNode), (...), ...]
+        # rgns : [ (istart, iend, name), (...), ...]
         # bnds : [ (nodeNo, name), (...), ... ]
         
         bnds.sort( lambda bnd1, bnd2 : cmp(bnd1[0], bnd2[0]) )
@@ -30,13 +30,12 @@ class Mesh1D:
         eqnCnt=0
         rgnCnt=len(rgns)
         for r in xrange(0,rgnCnt):
-            istart,iend,name,eqnPerNode = rgns[r]
+            istart,iend,name = rgns[r]
             region = FVM.Region(name)
             for i in xrange(istart, iend+1):
                 cell = FVM.Cell(nodes[i])
-                cell.vars = xrange(eqnCnt, eqnCnt+eqnPerNode)
-                eqnCnt+=eqnPerNode
                 cell.fields = {}
+                cell.region = region
                 region.cells.append(cell)
     
             j=0
@@ -44,11 +43,11 @@ class Mesh1D:
                 c1 = region.cells[j]
                 c2 = region.cells[j+1]
                 elem = FVM.Elem1D([c1,c2])
+                elem.region = region
                 region.elems.append(elem)
                 j+=1
 
             self.regions.append(region)
-        self.eqnCnt=eqnCnt
         
         for r in xrange(0, rgnCnt-1):
             rgn1 = self.regions[r]

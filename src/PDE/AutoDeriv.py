@@ -39,7 +39,7 @@ def _calcDeriv (a, b, func):
             
     return deriv
 
-class ADVar:
+class ADVar(object):
     def __init__(self, val=0, idx=-1):
         self.val = float(val)
         self.deriv = []
