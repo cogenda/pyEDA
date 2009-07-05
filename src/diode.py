@@ -29,7 +29,7 @@ class DDRegionEqn(RegionEqn):
     def eqnPerCell(self):
         return 3
     
-    def cellEqn(self, state, cell, dt=0):
+    def cellEqn(self, state, cell):
         mtl = cell.region.material
         ni,mun,mup,tau,eps = (mtl.ni, mtl.mun, mtl.mup, mtl.tau, mtl.eps)
         vol = cell.volume()
@@ -43,7 +43,7 @@ class DDRegionEqn(RegionEqn):
         state.setFunJac(vars[1], -Rsrh*vol)
         state.setFunJac(vars[2], -Rsrh*vol)
     
-    def elemEqn(self, state, elem, dt=0):
+    def elemEqn(self, state, elem):
         mtl = elem.region.material
         ni,mun,mup,tau,eps = (mtl.ni, mtl.mun, mtl.mup, mtl.tau, mtl.eps)
         VT = 0.0258*Unit.V

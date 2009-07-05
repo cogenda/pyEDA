@@ -23,6 +23,10 @@ class NLEqnState(object):
         self.x = None
         self.J = None
         self.dx = None
+        self.clock = None
+        self.NTStep = 2 # past time step to keep 
+        self.ptime = None
+        self.px = None
         
         if n>0:
             self._prepareData()
@@ -32,6 +36,9 @@ class NLEqnState(object):
         self.b = scipy.zeros(self.N)
         self.J = sparse.lil_matrix((self.N, self.N))
         self.dx = None
+        self.clock = 0
+        self.ptime = []
+        self.px = []
         
     def size(self):
         return self.nn
@@ -52,6 +59,39 @@ class NLEqnState(object):
         for idx in indices:
             vars.append(self.getVar(idx))
         return vars
+    
+    def getTimeDeriv(self, idx):
+        if self.clock==0.0:
+            return 0.0
+        if not idx<self.N:
+            raise IndexError
+        if not len(self.ptime)>0:
+            raise IndexError
+        
+        x1 = self.px[0]
+        dt1 = self.clock - self.ptime[0]
+        if dt1<1e-15:
+            return 0
+        else:
+            return (self.getVar(idx)-x1[idx])/dt1
+
+    def getTimeDerivs(self, indices):
+        ret = []
+        for idx in indices:
+            ret.append(self.getTimeDeriv(idx))
+        return ret
+   
+    def saveTimeStep(self):
+        self.ptime.insert(0, self.clock)
+        self.px.insert(0, self.x)
+        
+        nstep = len(self.ptime) 
+        if nstep > self.NTStep:
+            del self.ptime[nstep-1]
+            del self.px[nstep-1]
+        
+    def advanceClock(self, dt):
+         self.clock += dt
     
     def setVar(self, idx, v=0):
         if not idx<self.N:
@@ -128,7 +168,7 @@ class NLEqns(object):
                 print iter, err
             if flagConv:
                 break
-            
+
             dx = np.negative(dsolve.spsolve(self.state.J.tocsr(), self.state.b))
             self.state.dx = self.dampStep(dx)
 

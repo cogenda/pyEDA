@@ -14,37 +14,33 @@ class RegionEqn(object):
     def eqnPerCell(self):
         return 0
     
-    def cellEqn(self, state, cell, dt=0):
+    def cellEqn(self, state, cell):
         pass
     
-    def elemEqn(self, state, elem, dt=0):
+    def elemEqn(self, state, elem):
         pass
     
     def initGuess(self, state, cell):
         pass
     
-    def saveTimeStep(self, dt):
+    def damp(self, state, cell, dx):
         pass
-
+    
 class BoundaryEqn(object):
     def __init__(self):
         pass
 
-    def cellEqn(self, state, cell, dt=0):
+    def cellEqn(self, state, cell):
         pass
 
-    def saveTimeStep(self, dt):
-        pass
     
 class InterfaceEqn(object):
     def __init__(self):
         pass
 
-    def cellPairEqn(self, state, cell1, cell2, dt=0):
+    def cellPairEqn(self, state, cell1, cell2):
         pass
 
-    def saveTimeStep(self, dt):
-        pass
 
 class FVMEqns(NLEqns):
     def __init__(self, device):
@@ -130,3 +126,10 @@ class FVMEqns(NLEqns):
             cell,dummy = boundary.cells[0]
             self.boundaryEqns[b].cellEqn(self.state, cell)
   
+    def dampStep(self, dx):
+        for r,region in enumerate(self.device.regions):
+            damp = self.regionEqns[r].damp
+            for cell in region.cells:
+                damp(self.state, cell, dx)
+#        print dx
+        return dx
