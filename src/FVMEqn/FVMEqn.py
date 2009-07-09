@@ -50,6 +50,7 @@ class FVMEqns(NLEqns):
         self.regionEqns=[None]*len(device.regions)
         self.interfaceEqns=[None]*len(device.interfaces)
         self.boundaryEqns=[None]*len(device.boundaries)
+        self.customEqns=[]
         self.eqnCnt=0
 
     def setupEqns(self):
@@ -102,6 +103,9 @@ class FVMEqns(NLEqns):
         # boundary name not found
         raise ValueError
     
+    def addCustomEqn(self, eqn):
+        self.customEqns.append(eqn)
+        
     def initGuess(self):
         for r,region in enumerate(self.device.regions):
             initGuess = self.regionEqns[r].initGuess
@@ -125,6 +129,9 @@ class FVMEqns(NLEqns):
         for b,boundary in enumerate(self.device.boundaries):
             cell,dummy = boundary.cells[0]
             self.boundaryEqns[b].cellEqn(self.state, cell)
+            
+        for eqn in self.customEqns:
+            eqn(self.state)
   
     def dampStep(self, dx):
         for r,region in enumerate(self.device.regions):

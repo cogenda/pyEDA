@@ -158,7 +158,7 @@ class NLEqns(object):
         return dx
     
     def solve(self):
-        maxiter=10
+        maxiter=50
         trace = True
         for iter in xrange(0,maxiter):
             self.state.clearFunJac()

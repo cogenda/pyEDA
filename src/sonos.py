@@ -1,5 +1,5 @@
 '''
-Created on Jun 16, 2009
+Created on Jun 18, 2009
 
 @author: hash
 '''
@@ -7,352 +7,303 @@ Created on Jun 16, 2009
 from PDE.AutoDeriv import *
 from PDE.NLEqns import *
 from Mesh.Mesh1D import *
+from FVMEqn.FVMEqn import *
 import PhysUnit as Unit
+from NTU.SONOSEqns import *
 
 import numpy as np
 import scipy
 import math
 
-class RegionEqn:
-    def eqnPerCell(self):
-        return 0
-    
-    def cellEqn(self, state, cell, dt=0):
-        pass
-    
-    def elemEqn(self, state, elem, dt=0):
-        pass
-    
-    def initGuess(self, state, cell, dt=0):
-        pass
-    
-    def saveTimeStep(self, dt):
-        pass
-
-class BoundaryEqn:
-    def cellEqn(self, state, cell, dt=0):
-        pass
-
-    def saveTimeStep(self, dt):
-        pass
-    
-class InterfaceEqn:
-    def cellPairEqn(self, state, cell1, cell2, dt=0):
-        pass
-
-    def saveTimeStep(self, dt):
-        pass
-
-class SubstrateBoundaryEqn(BoundaryEqn):
+class ToxMaterial(OxideMaterial):
     def __init__(self):
-        self.V = 0
-        self.VT = 0.0258*Unit.V
-        self.affinity = 4.17*Unit.V
-        self.Eg = 1.12*Unit.V
-        self.ni = 1.45e10*pow(Unit.cm,-3.0)
-    
-    def setVoltage(self, V):
-        self.V = V
+        super(ToxMaterial, self).__init__()
+        self.eps = 4.2*Unit.eps0
+        self.Eg = 8.1*Unit.V
 
-    def cellEqn(self, state, cell, dt=0):
-        C = cell.fields['C']
-        phi = state.getVar(cell.vars[0])
-
-        n=0.5*(C+math.sqrt(C*C+4*self.ni*self.ni))
-        phiB = self.V + self.VT*math.log(n/self.ni) - self.affinity - self.Eg/2.0 
-        
-        state.resetEqn(cell.vars[0])
-        state.setFunJac(cell.vars[0], phi-phiB)
-        
-class GateBoundaryEqn(BoundaryEqn):
+class BlockMaterial(OxideMaterial):
     def __init__(self):
-        self.V = 0
-        self.workfunc = 4.17*Unit.V
-    
-    def setVoltage(self, V):
-        self.V = V
+        super(BlockMaterial, self).__init__()
 
-    def cellEqn(self, state, cell, dt=0):
-        phi = state.getVar(cell.vars[0])
-
-        state.resetEqn(cell.vars[0])
-        state.setFunJac(cell.vars[0], phi-(self.V-self.workfunc))
-        
-        
-class InsulatorRegionEqn(RegionEqn):
+class Si3N4Material(TrappingMaterial):
     def __init__(self):
-        self.eps = 3.9*Unit.eps0
-        self.affinity = 1.0*Unit.V
-        self.Eg = 9.0*Unit.V
+        super(Si3N4Material, self).__init__()
 
-    def eqnPerCell(self):
-        return 1
-
-    def elemEqn(self, state, elem, dt=0):
-        varA = elem.cells[0].vars[0]
-        varB = elem.cells[1].vars[0]
-        h = elem.len
+class DrainIFEqn(InterfaceEqn):
+    def __init__(self, elec=False, hole=False):
+        super(DrainIFEqn, self).__init__()
+        self.material=None
+        self.elecDrain = elec
+        self.holeDrain = hole
         
-        Va = state.getVar(varA)
-        Vb = state.getVar(varB)
-        state.setFunJac(varA, (Va-Vb)/h*self.eps)
-        state.setFunJac(varB, (Vb-Va)/h*self.eps)
+    def setMaterial(self, material):
+        self.material = material
+
+    def setDrainMode(self, elec=False, hole=False):
+        self.elecDrain=elec
+        self.holeDrain=hole
         
-    def initGuess(self, state, cell, dt=0):
-        state.setVar(cell.vars[0], -5.0*Unit.V)
-    
-class SiliconRegionEqn(RegionEqn):
-    def __init__(self):
-        self.VT = 0.0258*Unit.V
-        self.eps = 11.7*Unit.eps0
-        self.affinity = 4.17*Unit.V
-        self.Eg = 1.12*Unit.V
-        self.ni = 1.45e10*pow(Unit.cm,-3.0)
-
-    def eqnPerCell(self):
-        return 1
-    
-    def cellEqn(self, state, cell, dt=0):
-        C = cell.fields['C']
-        Ei = state.getVar(cell.vars[0]) + self.affinity + self.Eg/2.0
+    def cellPairEqn(self, state, cell1, cell2):
+        state.connectVar(cell1.vars[0], cell2.vars[0])
         
-        n = self.ni * exp(Ei/self.VT)
-        p = self.ni * exp(-Ei/self.VT)
-        rho = Unit.e* (C+p-n)
-        state.setFunJac(cell.vars[0], - rho*cell.volume())
-    
-    def elemEqn(self, state, elem, dt=0):
-        varA = elem.cells[0].vars[0]
-        varB = elem.cells[1].vars[0]
-        h = elem.len
+        cell=None
+        if (cell1.region.name=='Si3N4'):
+            cell=cell1
+        else:
+            cell=cell2
+        material = self.material
         
-        Va = state.getVar(varA)
-        Vb = state.getVar(varB)
-        state.setFunJac(varA, (Va-Vb)/h*self.eps)
-        state.setFunJac(varB, (Vb-Va)/h*self.eps)
-
-    def initGuess(self, state, cell):
-        C = cell.fields['C']
-        n=0.5*(C+math.sqrt(C*C+4*self.ni*self.ni))
-        phi = self.VT*math.log(n/self.ni) - self.affinity - self.Eg/2.0 
-        state.setVar(cell.vars[0], phi)
-
-class TrappingRegionEqn(RegionEqn):
-    def __init__(self):
-        self.VT = 0.0258*Unit.V
-        self.eps = 4.5*Unit.eps0
-        self.affinity = 2.3*Unit.V
-        self.Eg = 6*Unit.V
-
-        self.vsat = 1e7*Unit.cm/Unit.s
-        self.Esat = 1e6*Unit.V/Unit.cm
-        self.D = 1.0*Unit.cm*Unit.cm/Unit.s
-
-        self.Snp = 8.6e-13*Unit.cm*Unit.cm
-        self.Spn = 2.7e-13*Unit.cm*Unit.cm
-        self.Sno = 0.1*self.Snp
-        self.Spo = 0.1*self.Spn
-
-    def velocity(self, E):
-        tmp = E/self.Esat
-        return self.vsat*(tmp/(1.0+abs(tmp)))
-
-    def eqnPerCell(self):
-        return 5
-    
-    def cellEqn(self, state, cell, dt=0):
         vars = cell.vars
         V, n, p, nT, pT = state.getVars(vars)
-        NT = cell.fields['NT']
-        oT = NT-nT-pT 
         
-        rho = Unit.e*(p-n+pT-nT)
-        Cpo = self.Spo * self.vsat * p * oT  # hole capture at neutral trap
-        Cpn = self.Spn * self.vsat * p * nT  # hole capture at negative trap
-        Cno = self.Sno * self.vsat * n * oT  # electron capture at neutral trap
-        Cnp = self.Snp * self.vsat * n * pT  # electron capture at positive trap
+        if self.elecDrain:
+            Fn = -material.vsat * n
+            state.setFunJac(vars[1], Fn)
+
+        if self.holeDrain:
+            Fp = -material.vsat * p
+            state.setFunJac(vars[2], Fp)
+
+
+
+class NonLocalTunneling(object):
+    def __init__(self, mesh):
+        self.materials = {}
+        self.injectMaterial = None
+        self.mesh = mesh
+        self.inject = None
+        self.dir = None
+        self.band = 'Ec' # or 'Ev'
         
-        state.setFunJac(vars[0], - rho*cell.volume())
-        state.setFunJac(vars[1], -(Cnp+Cno)*cell.volume())
-        state.setFunJac(vars[2], -(Cpn+Cpo)*cell.volume())
-        state.setFunJac(vars[3], (Cnp+Cno)*cell.volume())
-        state.setFunJac(vars[4], (Cpn+Cpo)*cell.volume())
+    def setInjectBoundary(self, boundary_or_interface, material, dir):
+        if isinstance(boundary_or_interface, FVM.Boundary) or isinstance(boundary_or_interface, FVM.Interface):
+            self.inject = boundary_or_interface
+            self.injectMaterial = material
+            self.dir = dir
+        else:
+            raise TypeError
     
-    def elemEqn(self, state, elem, dt=0):
-        varsA = elem.cells[0].vars
-        varsB = elem.cells[1].vars
-        h = elem.len
-        
-        Va, na, pa, nTa, pTa = state.getVars(varsA)
-        Vb, nb, pb, nTb, pTb = state.getVars(varsB)
-        
-        Fn = 0.5*(na+nb) * self.velocity((Vb-Va)/h) + self.D * (na-nb)/h
-        Fp = 0.5*(pa+pb) * self.velocity((Va-Vb)/h) + self.D * (pa-pb)/h
-        
-        state.setFunJac(varsA[0], (Va-Vb)/h*self.eps)
-        state.setFunJac(varsA[1], -Fn)
-        state.setFunJac(varsA[2], -Fp)
-
-        state.setFunJac(varsB[0], (Vb-Va)/h*self.eps)
-        state.setFunJac(varsB[1], Fn)
-        state.setFunJac(varsB[2], Fp)
-
-    def initGuess(self, state, cell):
-        NT = cell.fields['NT']
-        state.setVar(cell.vars[0], -5.0*Unit.V)
-        state.setVar(cell.vars[1], 1e-2*NT)
-        state.setVar(cell.vars[2], 1e-2*NT)
-        state.setVar(cell.vars[3], 1.1e-2*NT)
-        state.setVar(cell.vars[4], 0.9e-2*NT)
-
-class OxideSiliconIFEqn(InterfaceEqn):
-    def __init__(self):
-      pass
+    def setMaterials(self, materials):
+        self.materials = materials
     
-    def cellPairEqn(self, state, cell1, cell2):
-        state.connectVar(cell1.vars[0], cell2.vars[0])
+    def __call__(self, state):
+        iter = ElemIterator1D(self.mesh)
 
-class OxideTrappingIFEqn(InterfaceEqn):
-    def __init__(self):
-        self.injection = 0.0
-        self.J = 1e-3*Unit.A*pow(Unit.cm,-2.0)
+        polarity = 1.0
+        if self.band=='Ev':
+            polarity = -1.0
+
+        if isinstance(self.injectMaterial, SubstrateMaterial):
+            c,dummy = self.inject.cells[0]
+            Einj0 = float(state.getVar(c.vars[0])) + self.injectMaterial.affinity
+            if self.band == 'Ev':
+                Einj0 += self.injectMaterial.Eg
+            Ef = 0.0
+        elif isinstance(self.injectMaterial, GateMaterial):
+            c,dummy = self.inject.cells[0]
+            Ef = float(state.getVar(c.vars[0])) + self.injectMaterial.workfunc
+            Einj0 = Ef+0.1*polarity
         
-    def cellPairEqn(self, state, cell1, cell2):
-        state.connectVar(cell1.vars[0], cell2.vars[0])
+            
+        Einj = Einj0
+        Erange = np.linspace(Einj0, Einj0-0.2*polarity, 11)
+        dE = abs(Erange[1]-Erange[0])
+        VT = 300*Unit.kb*Unit.K/Unit.e
+        Jtot = 0
+        for Einj in Erange:
+            TE=0
+            termElem = None
+            termPos = None
+            
+            iter.setElem(self.inject, self.dir)
+            for elem in iter:
+                if self.dir>0:
+                    c1,c2 = elem.cells
+                else:
+                    c2,c1 = elem.cells
+                material = self.materials[elem.region.name]
+                if self.band=='Ec':
+                    me = material.me_tnl
+                else:
+                    me = material.mh_tnl
 
-        if cell1.region.name=='trapping':
-            cell = cell1
-        elif cell2.region.name=='trapping':
-            cell = cell2
-        
-        vars = cell.vars
-        state.setFunJac(vars[1], ADVar(self.injection*self.J/Unit.e))
+                prefac = 2.0/3.0 * math.sqrt(2*me*Unit.e)/Unit.hbar
+                E1 = state.getVar(c1.vars[0]) + material.affinity
+                E2 = state.getVar(c2.vars[0]) + material.affinity
+                if self.band=='Ev':
+                    E1=E1+material.Eg
+                    E2=E2+material.Eg
+                    
+                phi1 = (Einj-E1)*polarity
+                phi2 = (Einj-E2)*polarity
+                if phi1<=0:
+                    termElem = elem
+                    termPos = 0
+                    break
+                if phi2<=0:
+                    dx = phi1/(phi1-phi2)*abs(c1.node.pos - c2.node.pos)
+                    TE += prefac * pow(phi1, 0.5) * dx
+                    termElem = elem
+                    termPos = phi1/(phi1-phi2)
+                    break
+                else:
+                    dx = abs(c1.node.pos-c2.node.pos)
+                    if (abs(E1-E2)<1e-8):
+                        TE += prefac * pow(phi1, 0.5) * dx
+                    else:
+                        TE += prefac * (pow(phi1,1.5)-pow(phi2,1.5))/(phi1-phi2) * dx
 
-class SONOS(Mesh1D):
-    def __init__(self):
-        NOX = 20
-        NSi = 40
-        Nd = -1e17*pow(Unit.cm,-3.0)
-        NT = 1e18*pow(Unit.cm,-3.0)
-
-        xx1 = np.linspace(-20e-7*Unit.cm, 0.0, NOX+1)
-        xx2 = np.linspace(0.0, 2.0e-5*Unit.cm, NSi+1)
-        xx = np.unique(np.concatenate((xx1,xx2)))
-        Mesh1D.__init__(self, xx, 
-                        rgns=[(0, 10, 'blocking'),
-                              (10,15, 'trapping'),
-                              (15,NOX, 'oxide'), 
-                              (NOX,NOX+NSi, 'silicon')],
-                        bnds=[(0,'gate'),(NOX+NSi,'substrate')])
-        self.setFieldByFunc(1, 'NT', lambda x : NT)
-        self.setFieldByFunc(3, 'C', lambda x : Nd)
-
-class SONOSEqns(NLEqns):
-    def __init__(self, device):
-        NLEqns.__init__(self)
-
-        self.device = device
-        self.regionEqns=[]
-        self.interfaceEqns=[]
-        self.boundaryEqns=[]
-
-        eqnCnt=0
-        for region in device.regions:
-            if region.name=='oxide'  or region.name=='blocking':
-                eqn =InsulatorRegionEqn()
-            elif region.name=='silicon':
-                eqn = SiliconRegionEqn()
-            elif region.name=='trapping':
-                eqn = TrappingRegionEqn()
-            else:
-                raise ValueError
-
-            for cell in region.cells:
-                eqnPerCell = eqn.eqnPerCell()
-                cell.vars = xrange(eqnCnt, eqnCnt+eqnPerCell)
-                eqnCnt += eqnPerCell
-
-            self.regionEqns.append(eqn)
-
-        for boundary in device.boundaries:
-            if boundary.name=='gate':
-                self.boundaryEqns.append( GateBoundaryEqn() )
-            elif boundary.name=='substrate':
-                self.boundaryEqns.append( SubstrateBoundaryEqn() )
-            else:
-                raise ValueError
+            if not termElem==None and TE<30: 
+                if not termElem.region.name =='Si3N4':
+                    for elem in iter:
+                        if elem.region.name =='Si3N4':
+                            termElem = elem
+                            termPos=0.0
+                            break
+                    
+                if self.dir>0:
+                    c1,c2 = elem.cells
+                else:
+                    c2,c1 = elem.cells
+                dJ = exp(-2.0*TE) * math.log(1+ exp((Einj-Ef)/VT)) * dE
+            
+                prefac = self.injectMaterial.me_dos * Unit.kb * 300*Unit.K / 2.0 / (math.pi*math.pi) / pow(Unit.hbar,3.0)
+                dJ = dJ * prefac
                 
-        for i,interface in enumerate(device.interfaces):
-            if matchIFName(interface.name, 'oxide', 'silicon'):
-                self.interfaceEqns.append( OxideSiliconIFEqn() )
-            elif matchIFName(interface.name, 'oxide', 'trapping'):
-                self.ifc1 = OxideTrappingIFEqn()
-                self.ifc1.injection=1.0
-                self.interfaceEqns.append( self.ifc1 )
-            elif matchIFName(interface.name, 'blocking', 'trapping'):
-                self.ifc2 = OxideTrappingIFEqn()
-                self.ifc2.injection=-1.0
-                self.interfaceEqns.append( self.ifc2 )
-            else:
-                raise ValueError
-        
-        self.eqnCnt = eqnCnt
-        self.state = NLEqnState(self.eqnCnt)
+                if self.band=='Ec':
+                    eqn1, eqn2 = c1.vars[1], c2.vars[1]
+                else:
+                    eqn1, eqn2 = c1.vars[2], c2.vars[2]
+                    
+                state.setFunJac(eqn1, dJ*(1-termPos))
+                state.setFunJac(eqn2, dJ*(1-termPos))
+                
+                Jtot+=dJ
+        print "......Jtot = %8e (A/cm^2)" % (Jtot/Unit.A * Unit.cm *Unit.cm)
 
-    def initGuess(self):
-        for r,region in enumerate(self.device.regions):
-            initGuess = self.regionEqns[r].initGuess
-            for cell in region.cells:
-                initGuess(self.state, cell)
-        
-    def calcFunJac(self):
-        for r,region in enumerate(self.device.regions):
-            elemEqn = self.regionEqns[r].elemEqn
-            cellEqn = self.regionEqns[r].cellEqn
-            for elem in region.elems:
-                elemEqn(self.state, elem)
-            
-            for cell in region.cells:
-                cellEqn(self.state, cell)
-        
-        for i,interface in enumerate(self.device.interfaces):
-            (c1,c2),dummy = interface.cellPairs[0]
-            self.interfaceEqns[i].cellPairEqn(self.state, c1, c2)
-        
-        for b,boundary in enumerate(self.device.boundaries):
-            cell,dummy = boundary.cells[0]
-            self.boundaryEqns[b].cellEqn(self.state, cell)
-            
-        print self.state.J
-            
-def matchIFName(ifname, r1name, r2name):
-    if ifname==r1name+'|'+r2name or ifname==r2name+'|'+r1name:
-        return True
-    else:
-        return False
+class Trapping(Mesh1D):
+    def __init__(self):
+        NBlock = 6
+        NTrap = 6
+        NTunnel = 3
+        NN = NBlock+NTrap+NTunnel
 
+        xx = np.linspace(-15e-7*Unit.cm, 0.0, NN+1)
+        Mesh1D.__init__(self, xx, 
+                        rgns=[(0, NBlock, 'Block'), 
+                              (NBlock, NBlock+NTrap, 'Si3N4'),
+                              (NBlock+NTrap, NN, 'Tunnel')],
+                        bnds=[(0,'anode'),(NN,'cathode')])
+        
+        NT = 1e19*pow(Unit.cm, -3.0)
+        self.setFieldByFunc('Si3N4', 'NT', lambda x: NT)
+    
+class TrappingSolver(FVMEqns):
+    def __init__(self, device):
+        super(TrappingSolver, self).__init__(device)
+        
+        self.materials = {'Si3N4': Si3N4Material(),
+                          'Block': BlockMaterial(),
+                          'Tunnel':ToxMaterial(),
+                          'Substrate':SubstrateMaterial(-1e17*pow(Unit.cm, -3.0))}
+
+        self.BlockEqn  = InsulatorRegionEqn()
+        self.BlockEqn.setMaterial(self.materials['Block'])
+
+        self.Si3N4Eqn = TrappingRegionEqn()
+        self.Si3N4Eqn.setMaterial(self.materials['Si3N4'])
+
+        self.ToxEqn = InsulatorRegionEqn()
+        self.ToxEqn.setMaterial(self.materials['Tunnel'])
+
+        self.setRegionEqn('Block', self.BlockEqn)
+        self.setRegionEqn('Si3N4', self.Si3N4Eqn)
+        self.setRegionEqn('Tunnel', self.ToxEqn)
+
+        self.bcAnode   = GateBoundaryEqn()
+        self.bcCathode = MOSSubstrateEqn()
+        self.bcCathode.setMaterial(self.materials['Substrate'])  # p-type
+        self.setBoundaryEqn('anode', self.bcAnode)
+        self.setBoundaryEqn('cathode', self.bcCathode)
+
+        self.topIFEqn = DrainIFEqn(True, False)
+        self.topIFEqn.setMaterial(self.materials['Si3N4'])
+        self.bottomIFEqn = DrainIFEqn(False, True)
+        self.bottomIFEqn.setMaterial(self.materials['Si3N4'])
+        self.setInterfaceEqn('Block', 'Si3N4', self.topIFEqn)
+        self.setInterfaceEqn('Tunnel', 'Si3N4', self.bottomIFEqn)
+        
+        self.tunneling = NonLocalTunneling(self.device)
+        self.tunneling.setInjectBoundary(self.device.getBoundary('cathode'), self.materials['Substrate'], -1)
+        self.tunneling.setMaterials(self.materials)
+        self.addCustomEqn(self.tunneling)
+        
+        self.setupEqns()
 
 if __name__ == '__main__':
-    sonos = SONOS()
-    sonosEqns = SONOSEqns(sonos)
-    sonosEqns.initGuess()
+    device = Trapping()
+    eqns = TrappingSolver(device)
+    eqns.initGuess()
     
-    sonosEqns.boundaryEqns[0].setVoltage(0)
-    sonosEqns.solve()
-#    sonosEqns.boundaryEqns[0].setVoltage(5)
-#    sonosEqns.solve()
-#    sonosEqns.boundaryEqns[0].setVoltage(10)
-#    sonosEqns.solve()
-#    sonosEqns.ifc1.injection=1.0
-#    sonosEqns.ifc2.injection=-1.0
-#    sonosEqns.boundaryEqns[0].setVoltage(10)
-#    sonosEqns.solve()
+    eqns.bcAnode.setVoltage(0.0)
+    eqns.solve()
+
+    #----- voltage source
+    def VSource(t):
+        Vmax = 20
+        trise = 1e-6*Unit.s
+        thigh = 10e-6*Unit.s
+        tfall = 1e-6*Unit.s
+        if t<=trise:
+            return t/trise * Vmax
+        t-=trise
+        
+        if t<=thigh:
+            return Vmax
+        t-=thigh
+        
+        if t<=tfall:
+            return (1.0-t/tfall) * Vmax
+        
+        return 0.0
+    #-----
+        
+    #eqns.tunneling.band = 'Ev'
+
+    for ti in xrange(1,21):
+        eqns.state.saveTimeStep()
+        eqns.state.advanceClock(1e-7*Unit.s)
+        vg = VSource(eqns.state.clock)
+        print '--------- time:%8g (s),   Vg:%6g (V) ---------' % (eqns.state.clock/Unit.s, vg/Unit.V) 
+        eqns.bcAnode.setVoltage(vg)
+        eqns.solve()
+        
+        region = device.getRegion('Si3N4')
+        Qn=0
+        Qp=0
+        for cell in region.cells:
+            if cell.region.name=='Si3N4':
+                Qn += float(eqns.state.getVar(cell.vars[3])) * cell.volume()
+                Qp += float(eqns.state.getVar(cell.vars[4])) * cell.volume()
+        print '---------- trapped elec: %8g (cm^-2) -------' % (Qn*Unit.cm*Unit.cm)
+        print '---------- trapped hole: %8g (cm^-2) -------\n\n' % (Qp*Unit.cm*Unit.cm)
+        
     
-    vi = sonos.getVarIdx(0, 0)    
-    print sonosEqns.state.x[vi]
-    vi = sonos.getVarIdx(1, 0)    
-    print sonosEqns.state.x[vi]
-    vi = sonos.getVarIdx(2, 0)    
-    print sonosEqns.state.x[vi]
-    vi = sonos.getVarIdx(3, 0)    
-    print sonosEqns.state.x[vi]
+    iV = device.getVarIdx('Block', 0)
+    print eqns.state.x[iV]
+    iV = device.getVarIdx('Si3N4', 0)
+    print eqns.state.x[iV]
+    iV = device.getVarIdx('Tunnel', 0)
+    print eqns.state.x[iV]
+    
+#    iV = device.getVarIdx(0, 0);
+#    print eqns.state.x[iV]
+#    ielec = device.getVarIdx(0, 1);
+#    print eqns.state.x[ielec]
+#    ihole = device.getVarIdx(0, 2);
+#    print eqns.state.x[ihole]
+#    inT = device.getVarIdx(0, 3);
+#    print eqns.state.x[ielec]
+#    ipT = device.getVarIdx(0, 4);
+#    print eqns.state.x[ihole]
+        
