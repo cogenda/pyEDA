@@ -1,8 +1,4 @@
-'''
-Created on Jun 15, 2009
-
-@author: hash
-'''
+''' One-dimensional finite-volume mesh.  '''
 __all__=['FVM', 'Mesh1D', 'ElemIterator1D']
 
 import FVM1D as FVM
@@ -10,7 +6,16 @@ import scipy
 import numpy as np
 
 class ElemIterator1D(object):
+    '''
+    Iterator to walk through the mesh's elements.
+    '''
     def __init__(self, mesh, dir=1):
+        '''
+        constructor
+        
+        @param: mesh    Mesh1D
+        @param: dir    -1 to walk to the left, +1 to walk to the right
+        '''
         self.mesh = mesh
         self.dir  = dir
         
@@ -23,6 +28,10 @@ class ElemIterator1D(object):
             self.curr_e = len(region.elems)-1
         
     def setElem(self, elem_cell_bnd_or_interface, dir):
+        '''
+        Set the current element using an element, cell, boundary or interface.
+        Also set walking direction.
+        '''
         self.dir = dir
         if isinstance(elem_cell_bnd_or_interface, FVM.Elem1D):
             elem = elem_cell_bnd_or_interface
@@ -71,6 +80,9 @@ class ElemIterator1D(object):
         return self
     
     def next(self):
+        '''
+        Return the current element, and advance to the next in the preset direction.
+        '''
         mesh=self.mesh
         dir =self.dir
         if self.curr_r<0 or self.curr_r >= len(mesh.regions):
@@ -99,9 +111,14 @@ class ElemIterator1D(object):
         
 class Mesh1D(object):
     def __init__(self, xx, rgns, bnds):
-        # xx : coordinates of nodes
-        # rgns : [ (istart, iend, name), (...), ...]
-        # bnds : [ (nodeNo, name), (...), ... ]
+        ''' 
+        Construct the mesh structure, setup cells, elements, boundaries and interfaces.
+        @param: xx : coordinates of nodes (list or array)
+        @param: rgns list of regions, each region expressed as tuple [ (istart, iend, name), (...), ...]
+                example::
+                    [ (0, 10, 'region1'), (10, 20, 'region2') ]
+        @param: bnds list of boundaries, [ (nodeNo, name), (...), ... ]
+        '''
         
         bnds.sort( lambda bnd1, bnd2 : cmp(bnd1[0], bnd2[0]) )
         rgns.sort( lambda r1, r2: cmp(r1[0], r2[0]) )
@@ -154,6 +171,9 @@ class Mesh1D(object):
                 
     
     def getRegion(self, rName_or_rIdx):
+        '''
+        Return the region specified by region name of index.
+        '''
         if isinstance(rName_or_rIdx, str):
             for r in self.regions:
                 if r.name==rName_or_rIdx:
@@ -166,6 +186,9 @@ class Mesh1D(object):
             return self.regions[rIdx]
     
     def getBoundary(self, bName_or_bIdx):
+        '''
+        Return the boundary specified by region name of index.
+        '''
         if isinstance(bName_or_bIdx, str):
             for b in self.boundaries:
                 if b.name==bName_or_bIdx:
@@ -178,6 +201,9 @@ class Mesh1D(object):
             return self.boundaries[bIdx]
 
     def getInterface(self, r1, r2):
+        '''
+        Return the interface specified by the two region names
+        '''
         if not (isinstance(r1, FVM.Interface) and isinstance(r2, FVM.Interface)):
             raise TypeError
 
@@ -190,11 +216,25 @@ class Mesh1D(object):
         return None
 
     def setFieldByFunc(self, rName_or_rIdx, name, func):
+        '''
+        Set the field using a custom function.
+
+        @param: rName_or_rIdx   region name or index
+        @param: name            field name
+        @param: func            func(pos), function will be supplied by node coordinates, 
+                                should return field value.
+        '''
         region=self.getRegion(rName_or_rIdx)        
         for c in region.cells:
             c.fields[name] = func(c.node.pos)
                 
     def getField(self, rName_or_rIdx, name, cIdx=None):
+        '''
+        Return the field value at a node, or for all node
+        @param: rName_or_rIdx   region name or index
+        @param: name            field name
+        @param: cIdx            cell index, None if want values at all cells.
+        '''
         region=self.getRegion(rName_or_rIdx)        
         if not cIdx==None:
             if not cIdx<len(region.cells):
@@ -207,6 +247,11 @@ class Mesh1D(object):
             return vec
     
     def getVarIdx(self, rName_or_rIdx, var):
+        '''
+        Return the variable index for a type of variables.
+        @param: rName_or_rIdx   region name or index
+        @param: variable offset with-in the cell
+        '''
         region=self.getRegion(rName_or_rIdx)        
         vec = np.zeros(len(region.cells), dtype=int)
         for i,c in enumerate(region.cells):

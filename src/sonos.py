@@ -239,6 +239,16 @@ class TrappingSolver(FVMEqns):
         self.addCustomEqn(self.tunneling)
         
         self.setupEqns()
+    
+    def setMode(self,mode):
+        if mode=='program':
+            eqns.tunneling.band = 'Ec'
+            self.topIFEqn.setDrainMode(True, False)  # top interface drains electron
+            self.bottomIFEqn.setDrainMode(False, True) # bottom interface drains holes
+        elif mode=='erase':
+            eqns.tunneling.band = 'Ev'
+            self.topIFEqn.setDrainMode(False, True)
+            self.bottomIFEqn.setDrainMode(True, False)
 
 if __name__ == '__main__':
     device = Trapping()
@@ -250,7 +260,7 @@ if __name__ == '__main__':
 
     #----- voltage source
     def VSource(t):
-        Vmax = 20
+        Vmax = -20
         trise = 1e-6*Unit.s
         thigh = 10e-6*Unit.s
         tfall = 1e-6*Unit.s
@@ -268,7 +278,6 @@ if __name__ == '__main__':
         return 0.0
     #-----
         
-    #eqns.tunneling.band = 'Ev'
 
     for ti in xrange(1,21):
         eqns.state.saveTimeStep()
@@ -276,6 +285,11 @@ if __name__ == '__main__':
         vg = VSource(eqns.state.clock)
         print '--------- time:%8g (s),   Vg:%6g (V) ---------' % (eqns.state.clock/Unit.s, vg/Unit.V) 
         eqns.bcAnode.setVoltage(vg)
+        if vg>=0:
+            eqns.setMode('program')
+        else:
+            eqns.setMode('erase')
+
         eqns.solve()
         
         region = device.getRegion('Si3N4')

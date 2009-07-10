@@ -1,5 +1,30 @@
 '''
-Created on Jun 11, 2009
+Automatic Differentiation
+
+This package provides facility to evaluate partial derivatives automatically.
+Example usage::
+    
+    from PDE.AutoDeriv import *
+    a = ADVar(2.0, 0)
+    b = ADVar(3.0, 1)
+    c = a * b
+    
+In this example, we first create two Auto-differentiation variables, a and b.
+Apart from a numerical value, we assign to each variable an variable ID, 
+0 and 1, respectively.
+The only non-zero partial derivative of variable C{a} is 1.0 with respect to 
+variable 0, which is itself.
+
+When one performs arithmetic operations, such as multiplication, as in 
+C{c = a * b}, proper differentiation rules will be applied in addition to
+the normal multiplication.
+As a result, C{c} will have a value of 6.0 and partial derivative 
+3.0 and 2.0 with respect to variable 0 and 1, respectively.
+
+Currently supported operations are
+    - C{+ - * /} with ADVar variables and normal scalar numbers
+    - C{abs()}, C{pow()}, C{exp()}, C{log()} functions
+    - C{aux1()}, C{aux2()}
 
 @author: hash
 '''
@@ -9,6 +34,14 @@ import sys
 import math
 
 def _calcDeriv (a, b, func):
+    '''
+    Walk through the partial derivatives of a and b.
+    If for variable xi, either M{da/dxi} or M{db/dxi}
+    exists, evaluate C{func} and set it to C{deriv[i]}
+
+    @param: func  func(value_a, value_b, deriv_a, deriv_b)
+            where M{deriv_a = da/dxi}, M{deriv_b = db/dxi}. 
+    '''
     deriv = []
     if not (isinstance(a, ADVar) and isinstance(b, ADVar)):
         return NotImplemented
@@ -40,7 +73,15 @@ def _calcDeriv (a, b, func):
     return deriv
 
 class ADVar(object):
+    '''
+    Auto differentiation variable class.
+    '''
     def __init__(self, val=0, idx=-1):
+        '''
+        Constructor of AD variable
+        @param: val    numerical value of the variable
+        @param: idx    index of the variable
+        '''
         self.val = float(val)
         self.deriv = []
         if idx>=0:
@@ -65,12 +106,24 @@ class ADVar(object):
         return self.val
 
     def getVal(self):
+        '''
+        Return the numerical value of the variable.
+        '''
         return self.val
     
     def setVal(self, v):
+        '''
+        Sets the numerical value.
+        '''
         self.val = v
         
     def getDeriv(self, idx=-1):
+        '''
+        Return the partial derivative with respect to variable idx.
+        
+        If idx is omitted, return all partial derivatives, which
+        is a list of (idx, deriv) pairs.
+        '''
         if idx<0:
             return self.deriv
         else:
@@ -80,6 +133,12 @@ class ADVar(object):
             return 0.0
         
     def derivEq(self, other):
+        '''
+        Check if the two variables equal exactly.
+        
+        The numerical value and all the partial derivatives
+        need to be equal.
+        '''
         if not self.val == other.val:
             return False
         
@@ -90,6 +149,12 @@ class ADVar(object):
         return True
 
     def derivApproxEq(self, other, tol=1e-6):
+        '''
+        Check if the two variables equal approximately.
+        
+        The numerical value and all the partial derivatives
+        need to be approximately equal.
+        '''
         absTol = max(abs(self.val), abs(other.val))
         if not abs(self.val-other.val) < absTol:
             return False
@@ -101,6 +166,7 @@ class ADVar(object):
         return True
         
     def __add__(self, other):
+        ''' self + other, other can be a scalar or ADVar '''
         r = ADVar()
         if not isinstance(other, ADVar):
             other = float(other)
@@ -121,6 +187,7 @@ class ADVar(object):
         return r
 
     def __sub__(self, other):
+        ''' self - other, other can be a scalar or ADVar '''
         r = ADVar()
         if not isinstance(other, ADVar):
             other = float(other)
@@ -142,6 +209,7 @@ class ADVar(object):
         return r
     
     def __mul__(self, other):
+        ''' self * other, other can be a scalar or ADVar '''
         r = ADVar()
         if not isinstance(other, ADVar):
             other = float(other)
@@ -164,6 +232,7 @@ class ADVar(object):
         return r
         
     def __div__(self, other):
+        ''' self / other, other can be a scalar or ADVar '''
         r = ADVar()
         if not isinstance(other, ADVar):
             other = float(other)
@@ -177,7 +246,7 @@ class ADVar(object):
         return r
         
     def __rdiv__(self, other):
-        ''' other * self, other is a scalar'''
+        ''' other / self, other is a scalar'''
         r = ADVar()
         other = float(other)
         r.val = other / self.val
@@ -186,6 +255,7 @@ class ADVar(object):
         return r                
 
     def __pow__(self, other, modulo=0):
+        ''' self ^ other, other is a scalar '''
         if not modulo==0:
             return NotImplemented
         
@@ -239,6 +309,7 @@ class ADVar(object):
     
 
 def exp(x):
+    ''' exp(x), x is ADVar or scalar '''
     if not isinstance(x, ADVar):
         return math.exp(x)
     
@@ -250,6 +321,7 @@ def exp(x):
     return r
 
 def log(x):
+    ''' log(x), x is ADVar or scalar '''
     if not isinstance(x, ADVar):
         return math.log(x)
     
@@ -282,15 +354,19 @@ _BP3_DAUX2 =  7.451332191019419e+02
 _BP0_MISC  =  7.097827128183643e+02
 
 def aux1(x):
-    #
-    #                                       x
-    #                         Aux1(x) =  -------
-    #                                     sinh(x)
+    '''
+    Auxiliary function 1. 
+    
+    Break points used to ensure maximal precision::
+    
+                                           x
+                             Aux1(x) =  -------
+                                         sinh(x)
 
-    #                    d           sinh(x) - x*cosh(x)
-    #                    --Aux1(x) = -------------------
-    #                    dx              (sinh(x))^2
-
+                        d           sinh(x) - x*cosh(x)
+                        --Aux1(x) = -------------------
+                        dx              (sinh(x))^2
+    '''
     if isinstance(x, ADVar):
         y = x.val
     else:
@@ -337,14 +413,18 @@ def aux1(x):
     return r
 
 def aux2(x):
-    #                                     1
-    #                        Aux2(x) = -------
-    #                                  1 + e^x
-    #
-    #                      d             - e^x
-    #                      --Aux2(x) = -----------
-    #                      dx          (1 + e^x)^2
-
+    '''
+    Auxiliary function 2. 
+    
+    Break points used to ensure maximal precision::
+                                         1
+                            Aux2(x) = -------
+                                      1 + e^x
+    
+                          d             - e^x
+                          --Aux2(x) = -----------
+                          dx          (1 + e^x)^2
+    '''
     if isinstance(x, ADVar):
         y = x.val
     else:
