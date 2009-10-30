@@ -37,6 +37,7 @@ class NLEqnState(object):
         - C{NTStep} number of past time steps to be saved
         - C{ptime}  clock time of past saved steps
         - C{px} solution of past saved steps
+        - C{integ} integration
     '''
 
     def __init__(self, n=0):
@@ -67,6 +68,7 @@ class NLEqnState(object):
         self.clock = 0
         self.ptime = []
         self.px = []
+        self.integ = scipy.zeros(self.N)
         
     def size(self):
         '''Return the number of equations'''
@@ -129,20 +131,57 @@ class NLEqnState(object):
         for idx in indices:
             ret.append(self.getTimeDeriv(idx))
         return ret
-   
+    
+    def getTimeInteg(self, idx):
+        '''
+        Get the integration of a variable from time zero,
+        or from the last time resetTimeInteg() is called.
+        
+        @param: idx   variable index 
+        '''
+        if self.clock==0.0:
+            return 0.0
+        if not idx<self.N:
+            raise IndexError
+        if not len(self.ptime)>0:
+            raise IndexError
+        
+        x1 = self.px[0]
+        dt1 = self.clock - self.ptime[0]
+        return self.integ[idx] + 0.5*(self.getVar(idx)+x1[idx])*dt1
+    
+    def getTimeIntegs(self, indices):
+        '''
+        Get the integration of a list of variables
+        '''
+        ret = []
+        for idx in indices:
+            ret.append(self.getTimeDeriv(idx))
+        return ret
+    
+    def resetTimeInteg(self):
+        self.integ = scipy.zeros(self.N)
+    
     def saveTimeStep(self):
         '''
         Save the current iteration as the accepted solution.
 
         This will be used for time-derivative-calculation in the future.
         '''
+        # update integration
+        dt = self.clock - self.ptime[0]
+        self.integ += 0.5*(self.px[0]+self.x)*dt
+
+        # update saved solution
         self.ptime.insert(0, self.clock)
         self.px.insert(0, self.x)
         
+        # delete excessive old solution
         nstep = len(self.ptime) 
         if nstep > self.NTStep:
             del self.ptime[nstep-1]
             del self.px[nstep-1]
+            
         
     def advanceClock(self, dt):
         ''' Advance the system clock by dt. '''
