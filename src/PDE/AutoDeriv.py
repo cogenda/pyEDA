@@ -453,7 +453,7 @@ def aux2(x):
         tmp2 = tmp1 + 1.0;
         pd = -tmp1/(tmp2*tmp2)
     elif y <= _BP3_DAUX2:
-        pd = -math.exp(-x)
+        pd = -math.exp(-y)
     else:
         pd = 0.0
 
