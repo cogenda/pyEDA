@@ -2,6 +2,7 @@ __all__=['CircuitElem', 'Resistor', 'Capacitor', 'VSource', 'Diode']
 
 from PDE.NLEqns import *
 from PDE.AutoDeriv import *
+from PDE.ImplDeriv import *
 import math
 
 class CircuitElem(object):
@@ -85,31 +86,47 @@ class Diode(CircuitElem):
     SymbolPrefix = 'D'
     Terminals = ['+', '-']
 
-    def __init__(self, Js=1e-10, Rs=0.01):
+    class _DiodeDC(ImplDeriv):
+        def __init__(self, Js, Rs):
+            super(Diode._DiodeDC,self).__init__(1, 1)
+            self.Js = Js
+            self.Rs = Rs
+
+        def initGuess(self):
+            self.state.setVec([2, -1])
+
+        def calcFunJac(self):
+            super(Diode._DiodeDC,self).calcFunJac()
+            id,v = self.state.getVars(range(2))
+            id1 =  self.Js * ( exp((v-id*self.Rs)/0.0258)  - 1.0 )
+            self.state.setFunJac(self.sizeP+0, id-id1)
+
+
+    def __init__(self, Js=1e-10, Rs=1.0):
         super(Diode, self).__init__()
         self.Js = Js
         self.Rs = Rs
 
+    def _approxSol(self, v):
+        if v > 0.6:
+            id0 = (v-0.6)/self.Rs
+        else:
+            id0 = self.Js * ( exp(v/0.0258) - 1.0 )
+        return id0
+
     def calcFunJac(self, state):
         V1, V2 = state.getVars(self.varIdx)
 
-        v1, v2 = (V1.val, V2.val)
-        if v1-v2>0.6:
-            vd=ADVar(0.6,0)
-        else:
-            vd=ADVar(v1-v2,0)
+        vd0 = V1.getVal()-V2.getVal()
+        id0 = self._approxSol(vd0)
 
-        err = 1e100
-        while err>1e-10:
-            cc1 = self.Js * (exp(vd/0.025)-1)
-            cc2 = (v1-v2-vd)/self.Rs
-            err=abs(cc1-cc2)
-            deriv = err.getDeriv(0)
-            vd -= err.val/deriv
+        dcEqn = self._DiodeDC(self.Js, self.Rs)
+        dcEqn.setIndepVars([V1-V2])
+        dcEqn.state.setVec([id0, vd0])
+        dcEqn.solve()
 
-        Vd = V1-V2
-        Vd.setVal(vd.val)
-        curr = self.Js * (exp(Vd/0.025)-1)
+        res = dcEqn.getDeriv()
+        curr = res[0]
 
         state.setFunJac(self.varIdx[0], -curr)
         state.setFunJac(self.varIdx[1], curr)
