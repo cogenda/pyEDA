@@ -28,7 +28,7 @@ Currently supported operations are
 
 @author: hash
 '''
-__all__=['ADVar', 'exp', 'log', 'aux1', 'aux2']
+__all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'aux1', 'aux2']
 
 import sys
 import math
@@ -333,6 +333,32 @@ def log(x):
             r.deriv.append( (i,dx/x.val) )
         else:
             raise ArithmeticError
+    return r
+
+def sin(x):
+    ''' sin(x), x is ADVar or scalar '''
+    if not isinstance(x, ADVar):
+        return math.sin(x)
+    
+    r = ADVar()
+    r.val = math.sin(x)
+    rcos = math.cos(x)
+    
+    for i,dx in x.deriv:
+        r.deriv.append( (i, rcos*dx) )
+    return r
+
+def cos(x):
+    ''' cos(x), x is ADVar or scalar '''
+    if not isinstance(x, ADVar):
+        return math.sin(x)
+    
+    r = ADVar()
+    r.val = math.cos(x)
+    rsin = math.sin(x)
+    
+    for i,dx in x.deriv:
+        r.deriv.append( (i, -rsin*dx) )
     return r
 
 

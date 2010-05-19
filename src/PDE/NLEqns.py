@@ -199,7 +199,19 @@ class NLEqnState(object):
     
     def setVec(self, vec):
         '''Set the entire current solution vector'''
-        self.x = vec
+        if isinstance(vec, np.ndarray):
+            if len(vec) == self.N:
+                self.x = vec
+            else:
+                raise ValueError
+        elif isinstance(vec, list):
+            if len(vec) == self.N:
+                self.x = np.array(vec)
+            else:
+                raise ValueError
+        else:
+            raise TypeError
+            
     
     def setFunJac(self, idx, advar, op=OPADD):
         '''

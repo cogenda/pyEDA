@@ -161,6 +161,28 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(e.getDeriv(1), math.exp(3))
         self.assertAlmostEqual(e.getDeriv(2), math.exp(3))
 
+    def testSin(self):
+        a = ADVar(0.25*math.pi, 0)
+        b = ADVar(0.5*math.pi, 1)
+        c = ADVar(math.pi/3.0, 2)
+        d = sin(a) + sin(b) + sin(c)
+        
+        self.assertAlmostEqual(d, math.sin(a)+math.sin(b)+math.sin(c))
+        self.assertAlmostEqual(d.getDeriv(0), math.cos(a))
+        self.assertAlmostEqual(d.getDeriv(1), math.cos(b))
+        self.assertAlmostEqual(d.getDeriv(2), math.cos(c))
+
+    def testCos(self):
+        a = ADVar(0.25*math.pi, 0)
+        b = ADVar(0.5*math.pi, 1)
+        c = ADVar(math.pi/3.0, 2)
+        d = cos(a) + cos(b) + cos(c)
+        
+        self.assertAlmostEqual(d, math.cos(a)+math.cos(b)+math.cos(c))
+        self.assertAlmostEqual(d.getDeriv(0), -math.sin(a))
+        self.assertAlmostEqual(d.getDeriv(1), -math.sin(b))
+        self.assertAlmostEqual(d.getDeriv(2), -math.sin(c))
+
     def testLog(self):
         a = ADVar(1.0, 0)
         b = ADVar(2.0, 1)
