@@ -6,7 +6,7 @@ import math
 import string
 
 q0      = 1.6021918e-19    # C
-k       = 1.3806266e-23    # J/K
+kb      = 1.3806266e-23    # J/K
 eps0    = 8.85421487e-12   # F/m
 epsSi   = 11.7 * eps0
 epsOx   = 3.9 * eps0
@@ -82,7 +82,7 @@ class MOSLv3(CircuitElem):
 
         # Modified Vth
         if self.NFS>0:
-            Von = Vth + k*self.T/q0 * Xn
+            Von = Vth + kb*self.T/q0 * Xn
         else:
             Von = Vth
 
@@ -102,14 +102,17 @@ class MOSLv3(CircuitElem):
         Vsat  = (Vgsx - Vth)/(1 + Fb)
         Vc    = self.VMAX * Leff / Us
         Vdsat = Vsat + Vc - (Vsat**2 + Vc**2)**0.5
-        
+
         if VDS < Vdsat:
             Vdsx = VDS
         else:
             Vdsx = Vdsat
 
         # velocity saturation
-        Fdrain = 1.0 / ( 1.0 + Us*Vdsx/Leff/self.VMAX )
+        if Vgs>Vth:
+            Fdrain = 1.0 / ( 1.0 + Vdsx/Vc )
+        else:
+            Fdrain = 1.0
 
         Ueff = Us * Fdrain
         beta = Weff/Leff * Ueff * Cox
@@ -118,17 +121,20 @@ class MOSLv3(CircuitElem):
 
         # channel length modulation
         #Ep = self.VMAX / Us / (1.0-Fdrain)
-        Ep = Vc * (Vc+Vdsat) / Leff / Vdsat
-        dl = Xd * ( Xd**2 * Ep**2 /4.0  +  self.KAPPA*(VDS-Vdsat) ) ** 0.5 - Ep * Xd**2 /2.0
+        if VDS>Vdsat and Vgs>Vth:
+            Ep = Vc * (Vc+Vdsat) / Leff / Vdsat
+            dl = Xd * ( Xd**2 * Ep**2 /4.0  +  self.KAPPA*(VDS-Vdsat) ) ** 0.5 - Ep * Xd**2 /2.0
 
-        if dl < 0.5*Leff:
-            lfact = Leff/(Leff-dl)
+            if dl < 0.5*Leff:
+                lfact = Leff/(Leff-dl)
+            else:
+                lfact = 4.0*dl/Leff
         else:
-            lfact = 4.0*dl/Leff
+            lfact = 1.0
 
         Ids = Ids * lfact
         if VGS<Von:
-            Ids = Ids * exp(q0/k/self.T * (VGS-Von)/Xn)
+            Ids = Ids * exp(q0/kb/self.T * (VGS-Von)/Xn)
         
         return Ids
 
@@ -143,29 +149,34 @@ class MOSLv3(CircuitElem):
 
 if __name__=='__main__':
     mos = MOSLv3(
-            L    =1e-6, 
-            W    =1e-6,
-            TOX  =2e-8,
-            NSUB =1e16,
-            XJ   =1e-7,
-            VT0  =1.0,
-            NFS  =1e10,
-            GAMMA=0.5
+            L    =1.200e-6, 
+            W    =10.00e-6,
+            LD   =1.647e-7,
+            WD   =1.000e-7,
+            TOX  =2.120e-8,
+            PHI  =0.6,
+            NSUB =2.747e16,
+            XJ   =2.000e-7,
+            VT0  =0.7860,
+            GAMMA=0.5863,
+            DELTA=0.6967,
+            ETA  =4.368e-2,
+            U0   =591.7,
+            KAPPA=1.396e-10,
+            THETA=8.122e-2,
+            VMAX =1.733e5,
+            NFS  =1.98e12
            )
 
-    #Vgs = 5.0
-    #Vbs = 0.0
-    #for i in xrange(50):
-    #    Vds = 0.1*i
-    #    Ids = mos._Ids(Vgs,Vds,Vbs)
-    #    print Vds, Ids
-
-    Vds = 0.1
-    Vbs = 0.0
-    for i in xrange(50):
-        Vgs = 0.1*i
-        Ids = mos._Ids(Vgs,Vds,Vbs)
-        print Vgs, Ids
+    for i in xrange(1):
+        Vbs = -1.0 * i
+        for j in xrange(1):
+            Vds = 0.1*j
+            Vds = 5.0
+            for k in xrange(51):
+                Vgs = 0.1*k
+                Ids = mos._Ids(Vgs,Vds,Vbs)
+                print Vgs, Vds, Vbs, Ids
 
 
 
