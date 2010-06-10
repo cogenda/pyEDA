@@ -109,7 +109,7 @@ class MOSLv3(CircuitElem):
             Vdsx = Vdsat
 
         # velocity saturation
-        if Vgs>Vth:
+        if Vgsx>Vth:
             Fdrain = 1.0 / ( 1.0 + Vdsx/Vc )
         else:
             Fdrain = 1.0
@@ -121,7 +121,7 @@ class MOSLv3(CircuitElem):
 
         # channel length modulation
         #Ep = self.VMAX / Us / (1.0-Fdrain)
-        if VDS>Vdsat and Vgs>Vth:
+        if VDS>Vdsat and Vgsx>Vth:
             Ep = Vc * (Vc+Vdsat) / Leff / Vdsat
             dl = Xd * ( Xd**2 * Ep**2 /4.0  +  self.KAPPA*(VDS-Vdsat) ) ** 0.5 - Ep * Xd**2 /2.0
 
@@ -168,13 +168,11 @@ if __name__=='__main__':
             NFS  =1.98e12
            )
 
-    for i in xrange(1):
-        Vbs = -1.0 * i
-        for j in xrange(1):
-            Vds = 0.1*j
-            Vds = 5.0
-            for k in xrange(51):
-                Vgs = 0.1*k
+    for Vbs in [0, -1.0, -2.0] :
+        for j in xrange(26):
+            Vds = 0.2*j
+            for k in xrange(26):
+                Vgs = 0.2*k
                 Ids = mos._Ids(Vgs,Vds,Vbs)
                 print Vgs, Vds, Vbs, Ids
 
