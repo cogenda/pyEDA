@@ -3,17 +3,13 @@ from pydoctor.driver import main
 import sys
 
 args = []
-args.append("--add-module=src/diode.py")
-args.append("--add-module=src/sonos.py")
-args.append("--add-module=src/PhysUnit.py")
-
-args.append("--add-package=src/FVMEqn")
-args.append("--add-package=src/Mesh")
-args.append("--add-package=src/NTU")
-args.append("--add-package=src/PDE")
+args.append("--add-package=pyEDA/FVMEqn")
+args.append("--add-package=pyEDA/Mesh")
+args.append("--add-package=pyEDA/PDE")
+args.append("--add-package=pyEDA/Circuit")
 
 args.append("--make-html")
-args.append("--project-name=PySim")
+args.append("--project-name=pyEDA")
 
 sys.exit(main(args))
 

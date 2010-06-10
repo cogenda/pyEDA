@@ -4,10 +4,10 @@ Created on Jun 18, 2009
 @author: hash
 '''
 
-from PDE.AutoDeriv import *
-from PDE.NLEqns import *
-from Mesh.Mesh1D import *
-from FVMEqn.FVMEqn import *
+from pyEDA.PDE.AutoDeriv import *
+from pyEDA.PDE.NLEqns import *
+from pyEDA.Mesh.Mesh1D import *
+from pyEDA.FVMEqn.FVMEqn import *
 import PhysUnit as Unit
 
 import numpy as np

@@ -1,5 +1,5 @@
-from Circuit.Circuit import *
-from Circuit.Elements import *
+from pyEDA.Circuit.Circuit import *
+from pyEDA.Circuit.Elements import *
 
 circuit = CircuitEqns()
     

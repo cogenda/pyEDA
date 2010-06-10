@@ -1,6 +1,6 @@
 __all__=['MOSLv3']
 
-from PDE.AutoDeriv import *
+from pyEDA.PDE.AutoDeriv import *
 from Elements import *
 import math
 import string

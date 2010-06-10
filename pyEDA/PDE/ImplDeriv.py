@@ -6,8 +6,8 @@ Automatic Differetiation for Implicitly Defined Functions
 
 __all__ = ['ImplDeriv']
 
-from PDE.AutoDeriv import *
-from PDE.NLEqns import *
+from AutoDeriv import *
+from NLEqns import *
 from scipy import linalg
 
 class ImplDeriv(NLEqns):

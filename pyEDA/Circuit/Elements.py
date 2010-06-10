@@ -1,8 +1,8 @@
 __all__=['CircuitElem', 'Resistor', 'Capacitor', 'VSource', 'Diode']
 
-from PDE.NLEqns import *
-from PDE.AutoDeriv import *
-from PDE.ImplDeriv import *
+from pyEDA.PDE.NLEqns import *
+from pyEDA.PDE.AutoDeriv import *
+from pyEDA.PDE.ImplDeriv import *
 import math
 
 class CircuitElem(object):

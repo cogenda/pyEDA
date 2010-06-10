@@ -1,6 +1,6 @@
 __all__=['CircuitEqns', 'CircuitElem']
 
-from PDE.NLEqns import *
+from pyEDA.PDE.NLEqns import *
 from Elements import *
 import scipy
 

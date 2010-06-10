@@ -5,7 +5,7 @@ Equations are classified as Region equation, boundary equation and interface equ
 '''
 __all__=['RegionEqn', 'BoundaryEqn', 'InterfaceEqn', 'FVMEqns']
 
-from PDE.NLEqns import *
+from pyEDA.PDE.NLEqns import *
 
 class RegionEqn(object):
     '''

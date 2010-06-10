@@ -3,9 +3,9 @@ Created on Jun 13, 2009
 
 @author: hash
 '''
-from PDE.AutoDeriv import *
-from PDE.NLEqns import *
-from Mesh.Mesh1D import *
+from pyEDA.PDE.AutoDeriv import *
+from pyEDA.PDE.NLEqns import *
+from pyEDA.Mesh.Mesh1D import *
 
 import numpy as np
 import scipy
