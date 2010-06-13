@@ -22,14 +22,28 @@ class MOSLv3(CircuitElem):
 
         self.L      = kwArgs.get('L',       2e-6)   # device length         m
         self.W      = kwArgs.get('W',       50e-6)  # device width          m
+        self.T      = kwArgs.get('T',       300.15) # temperature
         self.LD     = kwArgs.get('LD',      0.0)    # diffusion length      m
         self.WD     = kwArgs.get('WD',      0.0)    # diffusion width       m
         self.TOX    = kwArgs.get('TOX',     1e-7)   # oxide thickness       m
-        self.PHI    = kwArgs.get('PHI',     0.6)    # surface inversion potential V
-        self.NSUB   = kwArgs.get('NSUB',    0.0)    # substrate doping      cm^-3
+
+        if kwArgs.has_key('NSUB'):
+            self.NSUB   = kwArgs.get('NSUB')        # substrate doping      cm^-3
+
+            T = self.T
+            Eg = 1.16 - 7.02e-4 * T*T/(T+1108)
+
+            n_i = 1.45e10 * (self.T/300)**1.5 * exp(q0*Eg/2.0/kb * (1./300. - 1./self.T))
+            self.PHI    = 2*kb*T/q0*log(self.NSUB/n_i)
+            Cox = epsOx / self.TOX
+            self.GAMMA  = (2*q0*epsSi*self.NSUB*1e6)**0.5 / Cox
+        else:
+            self.NSUB   = 0.0
+            self.PHI    = kwArgs.get('PHI',     0.6)# surface inversion potential V
+            self.GAMMA  = kwArgs.get('GAMMA',   0.0)# bulk threshold param  V^0.5
+
         self.XJ     = kwArgs.get('XJ',      0.0)    # junction depth        m
         self.VT0    = kwArgs.get('VT0',     0)      # ref threshold voltage V
-        self.GAMMA  = kwArgs.get('GAMMA',   0.0)    # bulk threshold param  V^0.5
         self.DELTA  = kwArgs.get('DELTA',   0.0)    # width effect on Vth   -
         self.ETA    = kwArgs.get('ETA',     0.0)    # static feedback on threshold voltage
         self.U0     = kwArgs.get('U0',      600.0)  # surface mobility      cm^2/V/s
@@ -40,7 +54,17 @@ class MOSLv3(CircuitElem):
         #self.KP     = kwArgs.get('KP',      2.1e-5) # transconductance      A/V^2
         #self.TPG    = kwArgs.get('TPG',     0.0)    # gate material type    -
         #self.NSS    = kwArgs.get('NSS',     0.0)    # surface state density cm^-2
-        self.T      = kwArgs.get('T',       300.15) # temperature
+
+        self.RSDW   = kwArgs.get('RSDW',    0.0)    # source/drain resistance of unit width ohm.m
+
+
+        if self.XJ<1e-8:
+            self.XJ = abs(self.XJ)+1e-9
+
+        self.RSDW = abs(self.RSDW)
+        self.NFS   = abs(self.NFS)
+        self.ETA   = abs(self.ETA)
+        self.KAPPA = abs(self.KAPPA)
 
     def _Ids(self, VGS, VDS, VBS):
         # oxide capacitance
@@ -135,7 +159,11 @@ class MOSLv3(CircuitElem):
         Ids = Ids * lfact
         if VGS<Von:
             Ids = Ids * exp(q0/kb/self.T * (VGS-Von)/Xn)
-        
+       
+        # series resistance
+        Rsd = self.RSDW / self.W
+        if abs(VDS)>1e-6:
+            Ids = Ids/(1. + Rsd*Ids/VDS)
         return Ids
 
     def calcFunJac(self, state):

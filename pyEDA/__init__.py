@@ -1,1 +1,1 @@
-__all__=['Circuit', 'FVMEqn', 'Mesh', 'PDE']
+__all__=['Circuit', 'Compact', 'FVMEqn', 'Mesh', 'PDE']

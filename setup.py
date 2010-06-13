@@ -6,6 +6,6 @@ setup(name='Distutils',
       author='Shen Chen',
       author_email='shenchen@cogenda.com',
       url='http://www.cogenda.com',
-      packages=['pyEDA', 'pyEDA.Circuit', 'pyEDA.FVMEqn', 'pyEDA.Mesh', 'pyEDA.PDE'],
+      packages=['pyEDA', 'pyEDA.Circuit', 'pyEDA.Compact', 'pyEDA.FVMEqn', 'pyEDA.Mesh', 'pyEDA.PDE'],
      )
 
