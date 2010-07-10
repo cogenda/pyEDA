@@ -1,0 +1,584 @@
+__all__=['MOSBSim3v3']
+
+from pyEDA.PDE.AutoDeriv import *
+from Elements import *
+import math
+import string
+
+q0      = 1.6021918e-19    # C
+kb      = 1.3806266e-23    # J/K
+kboq    = 8.617087e-5      # kb/q0
+eps0    = 8.85421487e-12   # F/m
+epsSi   = 11.7 * eps0
+epsOx   = 3.9 * eps0
+
+def log1pexp(x):
+    if x<37.0:
+        return log(1.+exp(x))
+    else:
+        return x
+
+class MOSBSim3v3(CircuitElem):
+    SymbolPrefix = 'M'
+    Terminals = ['D', 'G', 'S', 'B']
+
+    def __init__(self, **kwargs):
+        kwArgs={}
+        for k,v in kwargs.iteritems():
+            kwArgs[string.upper(k)] = v
+
+        self.L      = kwArgs.get("L", 1.0e-6)           # Length (m)
+        self.W      = kwArgs.get("W", 1.0e-6)           # Width (m)
+        self.TOX    = kwArgs.get("TOX", 1.5e-8)         # Gate oxide thickness (m)
+        self.TOXM   = kwArgs.get("TOXM", self.TOX)      # Gate oxide thickness used in extraction
+        self.VTH0   = kwArgs.get("VTH0", 0.7)           # Threshold voltage @VBS=0 for large L
+        self.CDSC   = kwArgs.get("CDSC", 2.4e-4)        # Drain/Source and channel coupling capacitance (F/m^2)
+        self.CDSCB  = kwArgs.get("CDSCB", 0.0)          # Body-bias dependence of cdsc (F/V/m^2)
+        self.CDSCD  = kwArgs.get("CDSCD", 0.0)          # Drain-bias dependence of cdsc (F/V/m^2)
+        self.CIT    = kwArgs.get("CIT", 0.0)            # Interface state capacitance
+        self.NFACTOR= kwArgs.get("NFACTOR", 0.0)        # Subthreshold swing coefficient
+        self.LNFACTOR= kwArgs.get("LNFACTOR", 0.0)      # Subthreshold swing coefficient, Leff dependence
+        self.WNFACTOR= kwArgs.get("WNFACTOR", 0.0)      # Subthreshold swing coefficient, Weff dependence
+        self.XJ     = kwArgs.get("XJ", 1.5e-7)          # Junction depth (m)
+        self.VSAT   = kwArgs.get("VSAT", 8.0e4)         # Saturationvelocity at tnom (m/sec)
+        self.LVSAT  = kwArgs.get("LVSAT", 0.0)          # Saturationvelocity at tnom, Leff dep 
+        self.WVSAT  = kwArgs.get("WVSAT", 0.0)          # Saturationvelocity at tnom, Weff dep 
+        self.PVSAT  = kwArgs.get("PVSAT", 0.0)          # Saturationvelocity at tnom, Leff.Weff dep 
+        self.AT     = kwArgs.get("AT", 3.3e4)           # Temperature coefficient of vsat (m/sec)
+        self.A0     = kwArgs.get("A0", 1.0)             # Non-uniform depletion width effect coefficient
+        self.AGS    = kwArgs.get("AGS", 0.0)            # Gate bias coefficient of Abulk
+        self.A1     = kwArgs.get("A1", 0.0)             # Non-saturation effect coefficient
+        self.A2     = kwArgs.get("A2", 1.0)             # Non-saturation effect coefficient
+        self.KETA   = kwArgs.get("KETA", -0.047)        # Body-bias coefficient of non-uniform depletion width effect
+        self.NSUB   = kwArgs.get("NSUB", 6e16)          # Substrate doping concentration
+        self.NCH    = kwArgs.get("NCH", 1.7e17)         # Channel doping concentration
+        self.GAMMA1 = kwArgs.get("GAMMA1", None)        # Body effect coefficient near the surface
+        self.GAMMA2 = kwArgs.get("GAMMA2", None)        # Body effect coefficient in the bulk
+        self.VBX    = kwArgs.get("VBX", None)           # Vbs at which the depletion width = XT
+        self.NGATE  = kwArgs.get("NGATE", 0.0)          # Poly-gate doping concentration (cm^-3)
+        self.VBM    = kwArgs.get("VBM", -3.0)           # Maximum body voltage (V)
+        self.XT     = kwArgs.get("XT", 1.55e-7)         # Doping depth
+        self.KT1    = kwArgs.get("KT1", -0.11)          # Temperature coefficient of Vth (V)
+        self.KT1L   = kwArgs.get("KT1L", 0.0)           # Temperature coefficient of Vth, channel length dependence (V.m)
+        self.KT2    = kwArgs.get("KT2", 0.022)          # Body-coefficient of kt1 (-)
+        self.K3     = kwArgs.get("K3", 80.0)            # Narrow width effect coefficient
+        self.K3B    = kwArgs.get("K3B", 0.0)            # Body effect coefficient of k3
+        self.W0     = kwArgs.get("W0", 2.5e-6)          # Narrow width effect parameter (m)
+        self.NLX    = kwArgs.get("NLX", 1.74e-7)        # Lateral non-uniform doping effect (m)
+        self.DVT0   = kwArgs.get("DVT0", 2.2)           # Short channel effect coefficient 0 (-)
+        self.DVT1   = kwArgs.get("DVT1", 0.53)          # Short channel effect coefficient 1 (-)
+        self.DVT2   = kwArgs.get("DVT2", -0.032)        # Short channel effect coefficient 2 (V^-1)
+        self.DVT0W  = kwArgs.get("DVT0W", 0.0)          # Narrow width effect coefficient 0 (m^-1)
+        self.DVT1W  = kwArgs.get("DVT1W", 5.3e6)        # Narrow width effect coefficient 1 (m^-1)
+        self.DVT2W  = kwArgs.get("DVT2W", -0.032)       # Narrow width effect body-bias coefficient (V^-1)
+        self.DROUT  = kwArgs.get("DROUT", 0.0)          # DIBL coefficient of output resistance
+        self.DSUB   = kwArgs.get("DSUB", self.DROUT)    # DIBL coefficient in the subthreshold region
+        self.UA     = kwArgs.get("UA", 2.25e-9)         # Linear gate dependence of mobility (m/V)
+        self.LUA    = kwArgs.get("LUA", 0.0)            # Linear gate dependence of mobility, Leff dep
+        self.WUA    = kwArgs.get("WUA", 0.0)            # Linear gate dependence of mobility, Weff dep
+        self.PUA    = kwArgs.get("PUA", 0.0)            # Linear gate dependence of mobility, Leff.Weff dep
+        self.UB     = kwArgs.get("UB", 5.87e-19)        # Quadratic gate dependence of mobility (m/V)^2
+        self.LUB    = kwArgs.get("LUB", 0.0)            # Quadratic gate dependence of mobility, Leff dep
+        self.WUB    = kwArgs.get("WUB", 0.0)            # Quadratic gate dependence of mobility, Weff dep
+        self.PUB    = kwArgs.get("PUB", 0.0)            # Quadratic gate dependence of mobility, Leff.Weff dep
+        self.UC     = kwArgs.get("UC", -4.65e-11)       # Body-bias dependence of mobility (m/V^2)
+        self.LUC    = kwArgs.get("LUC", 0.0)            # Body-bias dependence of mobility, Leff dep
+        self.WUC    = kwArgs.get("WUC", 0.0)            # Body-bias dependence of mobility, Weff dep
+        self.PUC    = kwArgs.get("PUC", 0.0)            # Body-bias dependence of mobility, Leff.Weff dep
+        self.U0     = kwArgs.get("U0", 670.0)           # Low-field mobility at Tnom (cm^2/V/s)
+        self.LU0    = kwArgs.get("LU0", 0.0)            # Low-field mobility at Tnom, Leff dep.
+        self.WU0    = kwArgs.get("WU0", 0.0)            # Low-field mobility at Tnom, Weff dep.
+        self.PU0    = kwArgs.get("PU0", 0.0)            # Low-field mobility at Tnom, Leff.Weff dep.
+        self.VOFF   = kwArgs.get("VOFF", -0.08)         # Threshold voltage offset (V)
+        self.LVOFF  = kwArgs.get("LVOFF", 0.0)          # Threshold voltage offset (V.m)
+        self.WVOFF  = kwArgs.get("WVOFF", 0.0)          # Threshold voltage offset (V.m)
+        self.TNOM   = kwArgs.get("TNOM", 25.0) + 273.15 # Parameter measurement temperature (deg C)
+        self.ELM    = kwArgs.get("ELM", 0.0)            # Non-quasi-static Elmore Constant Parameter
+        self.DELTA  = kwArgs.get("DELTA", 0.01)         # Effective Vds parameter (V)
+        self.RDSW   = kwArgs.get("RDSW", 0.0)           # Sorce-drain resistance per width
+        self.PRWG   = kwArgs.get("PRWG", 0.0)           # Gate-bias effect on parasitic resistance
+        self.PRWB   = kwArgs.get("PRWB", 0.0)           # Body-effect on parasitic resistance
+        self.PRT    = kwArgs.get("PRT", 0.0)            # Temperature coefficient of parasitic resistance
+        self.ETA0   = kwArgs.get("ETA0", 0.08)          # Subthreshold region DIBL coefficeint
+        self.ETAB   = kwArgs.get("ETAB", -0.07)         # Subthreshold region DIBL body-bias coefficeint (1/V)
+        self.PCLM   = kwArgs.get("PCLM", 1.3)           # Channel length modulation coefficient (-)
+        self.PDIBLC1= kwArgs.get("PDIBLC1", 0.39)       # Drain-induced barrier lowering oefficient
+        self.PDIBLC2= kwArgs.get("PDIBLC2", 0.0086)     # Drain-induced barrier lowering oefficient
+        self.PDIBLCB= kwArgs.get("PDIBLCB", 0.0)        # Body-effect on drain induced barrier lowering
+        self.PSCBE1 = kwArgs.get("PSCBE1", 4.24e8)      # Substrate current body-effect coeffiecient (V/m)
+        self.PSCBE2 = kwArgs.get("PSCBE2", 1.0e-5)      # Substrate current body-effect coeffiecient (m/V)
+        self.PVAG   = kwArgs.get("PVAG", 0.0)           # Gate dependence of output resistance parameter (-)
+        self.VFB    = kwArgs.get("VFB", -1.0)           # Flat band voltage
+        self.ACDE   = kwArgs.get("ACDE", 0.0)           # Exponential coefficient for finite charge thickness
+        self.MOIN   = kwArgs.get("MOIN", 0.0)           # Coefficient for gate-bias dependent surface potential
+        self.NOFF   = kwArgs.get("NOFF", 0.0)           # C-V turn-on/off parameter
+        self.VOFFCV = kwArgs.get("VOFFCV", 0.0)         # C-V lateral shift parameter
+        self.LINT   = kwArgs.get("LINT", 0.0)           # Length reduction parameter (m)
+        self.LL     = kwArgs.get("LL", 0.0)             # Length reduction parameter
+        self.LLC    = kwArgs.get("LLC", 0.0)            # Length reduction parameter for CV
+        self.LLN    = kwArgs.get("LLN", 0.0)            # Length reduction parameter
+        self.LW     = kwArgs.get("LW", 0.0)             # Length reduction parameter
+        self.LWC    = kwArgs.get("LWC", 0.0)            # Length reduction parameter for CV
+        self.LWN    = kwArgs.get("LWN", 0.0)            # Length reduction parameter
+        self.LWL    = kwArgs.get("LWL", 0.0)            # Length reduction parameter
+        self.LWLC   = kwArgs.get("LWLC", 0.0)           # Length reduction parameter for CV
+        self.WR     = kwArgs.get("WR", 1.0)             # Width dependence of rds (-)
+        self.WINT   = kwArgs.get("WINT", 0.0)           # Width reduction parameter (m)
+        self.DWG    = kwArgs.get("DWG", 0.0)            # Width reduction gate bias dependence (m/V)
+        self.DWB    = kwArgs.get("DWB", 0.0)            # Width reduction body bias dependence (m/V)
+        self.WL     = kwArgs.get("WL", 0.0)             # Width reduction parameter
+        self.WLC    = kwArgs.get("WLC", 0.0)            # Width reduction parameter for CV
+        self.WLN    = kwArgs.get("WLN", 0.0)            # Width reduction parameter
+        self.WW     = kwArgs.get("WW", 0.0)             # Width reduction parameter
+        self.WWC    = kwArgs.get("WWC", 0.0)            # Width reduction parameter for CV
+        self.WWN    = kwArgs.get("WWN", 0.0)            # Width reduction parameter
+        self.WWL    = kwArgs.get("WWL", 0.0)            # Width reduction parameter
+        self.WWLC   = kwArgs.get("WWLC", 0.0)           # Width reduction parameter for CV
+        self.B0     = kwArgs.get("B0", 0.0)             # Abulk narrow width parameter
+        self.B1     = kwArgs.get("B1", 0.0)             # Abulk narrow width parameter
+        self.CLC    = kwArgs.get("CLC", 0.0)            # Vdsat paramater for C-V model
+        self.CLE    = kwArgs.get("CLE", 0.0)            # Vdsat paramater for C-V model
+        self.ALPHA0 = kwArgs.get("ALPHA0", 0.0)         # Substrate current model parameter (m/V)
+        self.ALPHA1 = kwArgs.get("ALPHA1", 0.0)         # Substrate current model parameter (1/V)
+        self.BETA0  = kwArgs.get("BETA0", 30.0)         # Diode limiting current (V)
+        self.UTE    = kwArgs.get("UTE", -1.5)           # Temperature exponent of mobility (-)
+        self.K1     = kwArgs.get("K1", 0.5)             # First order body effect coefficient (V^0.5)
+        self.LK1    = kwArgs.get("LK1", 0.0)            # First order body effect coefficient, Leff dep
+        self.WK1    = kwArgs.get("WK1", 0.0)            # First order body effect coefficient, Leff dep
+        self.PK1    = kwArgs.get("PK1", 0.0)            # First order body effect coefficient, Leff dep
+        self.K2     = kwArgs.get("K2", 0.0)             # Second order body effect coefficient (-)
+        self.TEMP   = kwArgs.get("TEMP", 100.)+273.15   # Circuit temperature
+        self.UA1    = kwArgs.get("UA1", 4.31e-9)        # Temperature coefficient for ua in m/V
+        self.UB1    = kwArgs.get("UB1", -7.61e-18)      # Temperature coefficient for ub in (m/V)^2
+        self.UC1    = kwArgs.get("UC1", -5.6e-11)       # Temperature coefficient for uc in m/V^2
+
+        fac_scaling    = sqrt(epsSi/epsOx * self.TOX)
+        Vtm0           = kboq * self.TNOM              # nominal thermal voltage
+        Vtm            = kboq * self.TEMP              # thermal voltage
+        Eg0            = 1.16 - (7.02e-4 * self.TNOM * self.TNOM) / (self.TNOM + 1108.0)
+        ni             = 1.45e10 * (self.TNOM / 300.15) * sqrt(self.TNOM / 300.15) * exp(21.5565981 - Eg0 / (2.0 * Vtm0))
+
+        ###########  1  ############
+        # effective length and width
+        # see BSIM3v3 manual app-B-1.9
+        t0 = pow(self.L, self.LLN)
+        t1 = pow(self.W, self.LWN)
+        tmp1 = self.LL / t0 + self.LW / t1 + self.LWL / (t0 * t1)
+        dL = self.LINT + tmp1
+        tmp2 = self.LLC / t0 + self.LWC / t1 + self.LWLC / (t0 * t1)
+        #dLc = self.DLC + tmp2
+
+        t2 = pow(self.L, self.WLN)
+        t3 = pow(self.W, self.WWN)
+        dW = self.WINT + self.WL / t2 + self.WW / t3 + self.WWL / (t2 * t3)
+        tmp4 = self.WLC / t2 + self.WWC / t3 + self.WWLC / (t2 * t3)
+        #dWc = self.DWC + tmp4
+
+        Leff = self.L - 2.0 * dL                   # effective channel length
+        Weff0 = self.W - 2.0 * dW                   # effective channel width
+
+        invLeff = 1.0/Leff
+        invWeff0 = 1.0/Weff0
+        invLWeff0 = 1.0/(Leff * Weff0)
+
+        #LeffCV = self.L - 2.0 * dLc
+        ############################
+
+        if self.U0>1.0:
+            self.U0 *= 1e-4
+
+        self.NFACTOR += self.LNFACTOR*invLeff + self.WNFACTOR*invWeff0
+        self.VOFF    += self.LVOFF*invLeff + self.WVOFF*invWeff0
+        self.U0      += self.LU0*invLeff + self.WU0*invWeff0 + self.PU0*invLWeff0
+        self.UA      += self.LUA*invLeff + self.WUA*invWeff0 + self.PUA*invLWeff0
+        self.UB      += self.LUB*invLeff + self.WUB*invWeff0 + self.PUB*invLWeff0
+        self.UC      += self.LUC*invLeff + self.WUC*invWeff0 + self.PUC*invLWeff0
+        
+        self.K1      += self.LK1*invLeff + self.WK1*invWeff0 + self.PK1*invLWeff0
+        self.VSAT    += self.LVSAT*invLeff + self.WVSAT*invWeff0 + self.PVSAT*invLWeff0
+
+        ###########  2  ############
+        # saturation velocity
+        t4 = (self.TEMP/self.TNOM - 1.0)                # TempRatio
+        VsatTemp = self.VSAT - self.AT * t4
+        Rds0 = (self.RDSW + self.PRT * t4) / pow(Weff0 * 1e6, self.WR)
+        ############################
+
+        # gate capacitance
+        Cox = epsOx / self.TOX
+
+        ###########  3  ############
+        # electrostatics
+        if not kwArgs.has_key('NCH') and kwArgs.has_key('GAMMA1'):
+            # see BSIM3v3 manual app-A, notes NI-4
+            self.NCH = pow(self.GAMMA1 * Cox, 2.) / ( 2.*q0*epsSi )
+
+        # bulk potential and its powers
+        phi = 2.0 * Vtm0 * log(self.NCH / ni)
+        sqrtPhi = sqrt(phi);
+
+        # built-in potential, depletion length
+        Xdep0   = sqrt(2.0 * epsSi / (q0 * self.NCH * 1.0e6)) * sqrtPhi # depletion width
+        Cdep0   = epsSi / Xdep0
+        litl    = sqrt(3.0 * self.XJ * self.TOX)
+        Lt0     = fac_scaling * sqrt(Xdep0)
+
+        Vbi     = Vtm0 * log(1.0e20 * self.NCH / (ni * ni))             # built-in potential
+
+        # see BSIM3v3 manual app-A, notes NI-7
+        if not kwArgs.has_key('VBX'):
+            self.VBX = phi - (q0 * self.NCH * self.XT * self.XT) / (2.*epsSi)
+
+        # see BSIM3v3 manual app-A, notes NI-5,6
+        if not kwArgs.has_key('GAMMA1'):
+            gamma1 = 5.753e-12 * sqrt(self.NCH) / Cox                   # sqrt(2*q*epsSi*NCH)/Cox
+        if not kwArgs.has_key('GAMMA2'):
+            gamma2 = 5.753e-12 * sqrt(self.NSUB) / Cox                  # sqrt(2*q*epsSi*NSUB)/Cox
+
+
+        if not (kwArgs.has_key('K1') and kwArgs.has_key('K2')):
+            # if values of K1 and K2 are not supplied, calculate them
+            # see BSIM3v3 manual app-A, notes NI-2
+            t1 = sqrt(phi-self.VBX) - sqrtPhi
+            t2 = 2. * sqrtPhi * (sqrt(phi-self.VBM) - sqrtPhi) + self.VBM
+            K2 = (gamma1-gamma2) * t1 / t2
+            K1 = gamma2 - 2*K2* sqrt( phi - self.VBM )
+        else:
+            K1 = self.K1
+            K2 = self.K2
+
+        # see BSIM3v3 manual app-A, notes NI-1
+        if kwArgs.has_key('VTH0'):
+            if not kwArgs.has_key('VFB'):
+                self.VFB = self.VTH0 - phi - K1 * sqrtPhi
+        else:
+            self.VTH0 = self.VFB + phi + K1 * sqrtPhi
+
+        #########
+        self.fac_scaling    = fac_scaling
+        self.Leff           = Leff
+        self.Weff0          = Weff0
+        self.Cox            = Cox
+        self.phi            = phi
+        self.Vtm0           = Vtm0
+        self.Vtm            = Vtm
+        self.Eg0            = Eg0
+        self.ni             = ni
+        self.Vbi            = Vbi
+        self.K1             = K1
+        self.K2             = K2
+        self.Xdep0          = Xdep0
+        self.Lt0            = Lt0
+        self.VsatTemp       = VsatTemp
+        self.Rds0           = Rds0
+        self.litl           = litl
+        self.Cdep0          = Cdep0
+
+    def _Ids(self, VGS, VDS, VBS):
+        Leff                = self.Leff
+        Weff0               = self.Weff0
+        fac_scaling         = self.fac_scaling
+        Cox                 = self.Cox
+        phi                 = self.phi
+        sqrtPhi             = sqrt(phi)
+        phis3               = sqrtPhi * phi;
+        Vtm0                = self.Vtm0
+        Vtm                 = self.Vtm
+        Eg0                 = self.Eg0
+        ni                  = self.ni
+        Vbi                 = self.Vbi
+        K1                  = self.K1
+        K2                  = self.K2
+        Xdep0               = self.Xdep0
+        VsatTemp            = self.VsatTemp
+        Lt0                 = self.Lt0
+        litl                = self.litl
+        Cdep0               = self.Cdep0
+
+        Vbc = 0.9 * ( self.phi - pow(0.5*K1/K2, 2.) )
+
+        # effective Vbs
+        t0 = VBS - Vbc - 0.001
+        t1 = sqrt(t0 * t0 - 0.004 * Vbc)
+        Vbseff = Vbc + 0.5 * (t0 + t1)
+
+        # Calculate Phis, sqrtPhis and Xdep
+        if Vbseff>0:
+            Phis = phi*phi/(phi+Vbseff)
+            sqrtPhis = phis3 / (phi+0.5*Vbseff)
+        else:
+            Phis = phi - Vbseff
+            sqrtPhis = sqrt(Phis)
+        Xdep = Xdep0 * sqrtPhis / sqrtPhi
+
+        # {{{ Calculation of Threshold voltage
+        ######################
+        t3 = sqrt(Xdep)
+        V0 = Vbi - phi
+        if self.DVT2*Vbseff + 0.5 > 0:
+            t1 = 1.0 + self.DVT2*Vbseff
+        else:
+            t1 = (1.0 + 3.0*self.DVT2*Vbseff) / (3.0 + 8.0*self.DVT2*Vbseff)
+        Ltl = fac_scaling * t3 * t1   # char. length of potential along channel
+
+        if self.DVT2W*Vbseff + 0.5 > 0:
+            t1 = 1.0 + self.DVT2W*Vbseff
+        else:
+            t1 = (1.0 + 3.0*self.DVT2W*Vbseff) / (3.0 + 8.0*self.DVT2W*Vbseff)
+        Ltw = fac_scaling * t3 * t1 # char. length of potential across channel
+
+        # length dependence of Vth roll-off
+        t2 = exp(-0.5 * self.DVT1 * Leff / Ltl)
+        t2 = t2 * ( 1. + 2. * t2)
+        dVth_L = self.DVT0 * t2 * V0
+
+        # width dependence of Vth roll-off
+        t2 = exp(-0.5 * self.DVT1W * Weff0 * Leff / Ltw)
+        t2 = t2 * ( 1. + 2. * t2)
+        dVth_W = self.DVT0W * t2 * V0
+
+        # DIBL Vth shift
+        t2 = exp(-0.5 * self.DSUB * Leff / Lt0)
+        t2 = t2 * ( 1. + 2. * t2)
+        dVth_DIBL = VDS * t2 * ( self.ETA0 + self.ETAB * Vbseff )
+
+        K1ox = self.K1 * self.TOX / self.TOXM
+        K2ox = self.K2 * self.TOX / self.TOXM
+
+        # lateral non-uniform doping
+        dVth_lat = K1ox * (sqrt(1.+self.NLX/Leff) - 1.) * sqrtPhi
+
+        # temperature effect
+        dVth_temp = (self.KT1 + self.KT1L/Leff + self.KT2*Vbseff) * (self.TEMP/self.TNOM - 1.0)
+
+        # narrow width effect
+        dVth_nrw = (self.K3 + self.K3B * Vbseff) * self.TOX / (Weff0 + self.W0) * phi
+
+        Vth = self.VTH0 - self.K1*sqrtPhi + K1ox*sqrtPhis - K2ox * Vbseff \
+              + dVth_lat + dVth_nrw \
+              - dVth_L - dVth_W - dVth_DIBL + dVth_temp
+        
+        ######################
+        # }}}
+
+
+        # {{{ Poly Depletion Effect
+        t0 = VGS - (self.VFB + phi)
+        if t0>0 and self.NGATE>1e18 and self.NGATE<1e25:
+            t1 = 1e6 * q0 * epsSi * self.NGATE / ( Cox*Cox )
+            t2 = t1 * ( sqrt(1. + 2. * t0 / t1) - 1.0 )
+            Vgseff = self.VFB+phi+t2
+        else:
+            Vgseff = VGS
+            
+        # }}}
+
+        # {{{ Calculatation of Vgsteff, the effective Vgs-Vth
+
+        # factor n
+        t0 = self.NFACTOR * epsSi / Xdep
+        t1 = self.CDSC + self.CDSCB * Vbseff + self.CDSCD * VDS
+        t2 = exp(-0.5 * self.DVT1 * Leff / Ltl)
+        t2 = t2 * ( 1. + 2. * t2)
+        t3 = (t0 + self.CIT + t1*t2) / Cox
+        if t3 > -0.5:
+            fac_n = 1. + t3
+        else:
+            fac_n = (1. + 3.*t3) * ( 1. / ( 3. + 8.*t3 ) )
+
+        t0 = 1.0 / fac_n /Vtm
+        t1 = 0.5 * (Vgseff - Vth) * t0
+        t2 = exp(self.VOFF*t0 - t1)
+        Vgsteff = 2.*fac_n * Vtm * log1pexp(t1) / ( 1. + 2.*fac_n * Cox / Cdep0 *t2 )
+        # }}}
+
+
+        # voltage dependant effective width
+        Weff = Weff0 - 2. * (self.DWG*Vgsteff + self.DWB * (sqrtPhis - sqrtPhi))
+
+        # voltage dependant source/drain resistance
+        t0 = self.PRWG*Vgsteff + self.PRWB*(sqrtPhis-sqrtPhi)
+        if t0>-0.9:
+            Rds = self.Rds0 * (1.+t0)
+        else:
+            Rds = self.Rds0 * (0.8+t0) * (1.0 / (17.0 + 20.0 * t0))
+
+
+        # {{{ Calculation of Abulk
+        t1 = 0.5 * K1ox / sqrtPhis
+        t2 = Leff / (Leff + 2.0 * sqrt(self.XJ * Xdep))
+        t3 = (self.A0 * t2) + (self.B0 / (Weff0 + self.B1))
+        t4 = self.AGS * self.A0 * t2*t2*t2
+
+        Abulk0 = 1.0 + t1 * t3
+        Abulk = Abulk0 + (-t1 * t4) * Vgsteff
+
+        if Abulk0<0.1:
+            Abulk0 = (0.2-Abulk0) / (3.0-20.0*Abulk0)
+        if Abulk <0.1:
+            Abulk = (0.2-Abulk) / (3.0-20.0*Abulk)
+
+        t2 = self.KETA * Vbseff
+        if t2>-0.9:
+            t0 = 1. / (1. + t2)
+        else:
+            t0 = (17. + 20. * t2) / (0.8 + t2)
+
+        Abulk *= t0
+        Abulk0 *= t0
+        # }}}
+
+        # {{{ Mobility calculation (mobMOD=1)
+        # temperature correction
+        t0 = self.TEMP/self.TNOM - 1.0
+        Ua = self.UA + self.UA1 * t0
+        Ub = self.UB + self.UB1 * t0
+        Uc = self.UC + self.UC1 * t0
+        U0 = self.U0 * pow(self.TEMP/self.TNOM, self.UTE)
+
+        t2 = Ua + Uc * Vbseff
+        t3 = (Vgsteff + Vth + Vth) / self.TOX
+        t5 = t3 * (t2 + Ub * t3)
+        if t5>-0.8:
+            denomi = 1.0 + t5
+        else:
+            denomi = (0.6 + t5) / (7.0 + 10.0 * t5)
+        Ueff = U0 / denomi
+        # }}}
+
+        # Saturation E-field
+        Esat = 2.0 * VsatTemp / Ueff
+
+        # Saturation Drain Voltage Vdsat
+        lmd = self.A1 * Vgsteff + self.A2
+
+        Vgst2Vtm = Vgsteff + 2.0 * Vtm;
+        WVCoxRds = Weff * VsatTemp * Cox * Rds
+
+        if lmd==1.0 and Rds==0.0:
+            Vdsat = Esat*Leff*Vgst2Vtm / ( Abulk*Esat*Leff + Vgst2Vtm )
+        else:
+            t1 = Abulk*Abulk * WVCoxRds + (1./lmd -1.)*Abulk # a
+            t2 = - ( Vgst2Vtm*(2./lmd-1.) + Abulk*Esat*Leff + 3.*Abulk*Vgst2Vtm*WVCoxRds ) # b
+            t3 = Vgst2Vtm*Esat*Leff + 2. *Vgst2Vtm*Vgst2Vtm * WVCoxRds # c
+            Vdsat = ( -t2 - sqrt(t2*t2 - 4.*t1*t3) ) / (2.*t1)
+
+
+        # effective Vds
+        t0 = Vdsat - VDS - self.DELTA
+        Vdseff = Vdsat - 0.5*(t0 + sqrt(t0*t0 + 4.*self.DELTA*Vdsat) )
+        if VDS==0.0:
+            Vdseff=0.0
+
+        # VAsat
+        t0 = 1.0 - 0.5 * Abulk*Vdsat / Vgst2Vtm
+        t1 = Esat*Leff + Vdsat + 2. * WVCoxRds * Vgsteff * t0
+        t2 = 2./lmd - 1. + WVCoxRds*Abulk
+        Vasat = t1/t2
+
+        # VA_CLM
+        VaCLM = (Abulk*Esat*Leff + Vgsteff) / ( self.PCLM*Abulk*Esat*litl ) * (Vds-Vdseff)
+
+        # VA_DIBLC
+        t0 = exp(-0.5*self.DROUT*Leff/Lt0)
+        thetaRout = self.PDIBLC1 * ( t0 + 2.*t0*t0 ) + self.PDIBLC2
+
+        t1 = Abulk*Vdsat
+        VaDIBLC = Vgst2Vtm/(thetaRout * (1.+self.PDIBLCB*Vbseff)) * (1.-t1/(t1+Vgst2Vtm))
+
+        # VA
+        t0 = self.PVAG * Vgsteff / (Esat*Leff)
+        if t0>-0.9:
+            t0 = 1. + t0
+        else:
+            t0 = (0.8+t0) * (1. / (17. + 20.*t0) )
+        Va = Vasat + t0 / (1./VaCLM + 1./VaDIBLC)
+
+        # one over VaSCBE
+        rcpVaSCBE = self.PSCBE2/Leff * exp(-self.PSCBE1*litl/(VDS-Vdseff))
+
+
+        # Calculation of Ids
+        CoxWovL = Cox * Weff / Leff
+        beta = Ueff * CoxWovL
+        fgche1 = Vgsteff * (1.0 - 0.5 * Abulk * Vdseff / Vgst2Vtm)
+        fgche2 = 1.0 + Vdseff / (Esat*Leff)
+        gche = beta * fgche1 / fgche2
+
+        t0 = Vdseff / (1.0 + gche * Rds)
+        Idl = gche * t0
+
+        Idsa = Idl * (1.0 + (VDS-Vdseff) / Va)
+        Ids = Idsa * (1.0 + (VDS-Vdseff) * rcpVaSCBE)
+
+        return Ids
+
+    def calcFunJac(self, state):
+        VD, VG, VS, VB = state.getVars(self.varIdx)
+        VDS = VD - VS
+        VGS = VG - VS
+        VBS = VB - VS
+
+        Ids = self._Ids(VGS, VDS, VBS)
+
+if __name__=='__main__':
+    mos = MOSBSim3v3(
+        L = 0.19e-6, W=10e-6, TEMP=25,
+        TOX      = 3.87E-09,            TOXM     = 3.87E-09,            XJ       = 1.6000000E-07,
+        NCH      = 3.8694000E+17,       LLN      = 1.1205959,           LWN      = 0.9200000,
+        WLN      = 1.0599999,           WWN      = 0.8768474,           LINT     = 1.5757085E-08,
+        LL       = 2.6352781E-16,       LW       = -2.2625584E-16,      LWL      = -2.0576711E-22,
+        WINT     = -1.4450482E-09,      WL       = -2.3664573E-16,      WW       = -3.6409690E-14,
+        WWL      = -4.0000000E-21,      MOBMOD   = 1,                   DWG      = -5.9600000E-09,
+        DWB      = 4.5000000E-09,
+        ##### Vth parameter
+        VTH0     = 0.39,                WVTH0    = -2.9709472E-08,      PVTH0    = 5.0000000E-16,
+        K1       = 0.6801043,           WK1      = -2.4896840E-08,      PK1      = 1.3000000E-15,
+        K2       = -4.9977830E-02,      K3       = 10.0000000,          DVT0     = 1.3000000,
+        DVT1     = 0.5771635,           DVT2     = -0.1717554,          DVT0W    = 0.00,
+        DVT1W    = 0.00,                DVT2W    = 0.00,                NLX      = 7.5451030E-08,
+        W0       = 5.5820150E-07,       K3B      = -3.0000000,
+        ##### Mobility
+        VSAT     = 8.2500000E+04,       PVSAT    = -8.3000000E-10,      UA       = -1.0300000E-9,
+        LUA      = 7.7349790E-19,       PUA      = -1.0000000E-24,      UB       = 2.3666682E-18,
+        UC       = 1.2000000E-10,       PUC      = 1.5000000E-24,       RDSW     = 55.5497200,
+        PRWB     = -0.2400000,          PRWG     = 0.4000000,           WR       = 1.0000000,
+        U0       = 3.4000000E-02,       LU0      = 2.3057663E-11,       WU0      = -3.1009695E-09,
+        A0       = 0.8300000,           KETA     = -3.0000000E-03,      LKETA    = -1.7000000E-09,
+        A1       = 0.00,                A2       = 0.9900000,           AGS      = 0.3200000,
+        B0       = 6.0000000E-08,       B1       = 0.00,
+        ##### Subthreshold
+        VOFF     = -0.1030000,          LVOFF    = -3.3000000E-09,      NFACTOR  = 1.2500000,
+        LNFACTOR = 4.5000000E-08,       CIT      = 0.00,                CDSC     = 0.00,
+        CDSCB    = 0.00,                CDSCD    = 1.0000000E-04,       ETA0     = 2.8000001E-02,
+        ETAB     = -2.7000001E-02,      DSUB     = 0.4000000,
+        ###### ROUT PARAMETERS
+        PCLM     = 1.2000000,           PPCLM    = 2.9999999E-15,       PDIBLC1  = 2.5000000E-02,
+        PDIBLC2  = 3.8000000E-03,       PPDIBLC2 = 2.7000001E-16,       PDIBLCB  = 0.00,
+        DROUT    = 0.5600000,           PSCBE1   = 3.4500000E+08,       PSCBE2   = 1.0000000E-06,
+        PVAG     = 0.00,                DELTA    = 1.0000000E-02,       ALPHA0   = 1.7753978E-08,
+        ALPHA1   = 0.1764000,           LALPHA1  = 7.6250000E-09,       BETA0    = 11.1683940,
+        ##### TEMPERATURE EFFECTS PARAMETERS
+        KT1      = -0.2572866,          KT2      = -4.0000000E-02,      AT       = 3.7000000E+04,
+        PAT      = -7.5000000E-10,      UTE      = -1.5500000,          UA1      = 1.7600000E-09,
+        LUA1     = 6.0000000E-18,       WUA1     = -1.1000000E-16,      PUA1     = -5.0000000E-25,
+        UB1      = -2.4000000E-18,      UC1      = -1.0000000E-10,      LUC1     = 1.6999999E-17,
+        PUC1     = -3.0000000E-24,      KT1L     = -1.0000000E-09,      PRT      = -55.0000000,
+            )
+
+    for Vbs in [0.]:
+        for j in xrange(1):
+            Vds = 1.8
+            for k in xrange(41):
+                Vgs = 0.05*k
+                Ids = mos._Ids(Vgs,Vds,Vbs)
+                print "%15g %15g %15g %15g" % (Vgs, Vds, Vbs, Ids)
+
+#    for j in xrange(1,37):
+#        Vbs = 0.
+#        Vds = j*0.05
+#        Vgs = 1.8
+#        Ids = mos._Ids(Vgs,Vds,Vbs)
+#        print Vgs, Vds, Vbs, Ids
+
+

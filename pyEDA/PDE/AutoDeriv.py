@@ -28,7 +28,7 @@ Currently supported operations are
 
 @author: hash
 '''
-__all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'aux1', 'aux2']
+__all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'sqrt', 'aux1', 'aux2']
 
 import sys
 import math
@@ -361,6 +361,20 @@ def cos(x):
         r.deriv.append( (i, -rsin*dx) )
     return r
 
+def sqrt(x):
+    ''' square root of x'''
+    if not isinstance(x, ADVar):
+        return math.sqrt(x)
+
+    r = ADVar()
+    t0 = math.sqrt(x)
+    t1 = 1./(2.*t0)
+
+    r.val = t0
+    for i,dx in x.deriv:
+        r.deriv.append( (i, t1*dx) )
+    return r
+ 
 
 _BP0_AUX1  = -8.121635672643270e-03
 _BP1_AUX1  =  8.121635672643270e-03
@@ -503,3 +517,4 @@ if __name__ == '__main__':
     print (a+b)
     print (a+c)
     print (1+c)
+    print sqrt(c)
