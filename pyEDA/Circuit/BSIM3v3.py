@@ -22,135 +22,147 @@ class MOSBSim3v3(CircuitElem):
     SymbolPrefix = 'M'
     Terminals = ['D', 'G', 'S', 'B']
 
+    Param_Defs = {
+        "L":  1.0e-6,           # Length (m)
+        "W":  1.0e-6,           # Width (m)
+        "TOX":  1.5e-8,         # Gate oxide thickness (m)
+        "TOXM":  None,          # Gate oxide thickness used in extraction
+        "VTH0":  0.7,           # Threshold voltage @VBS=0 for large L
+        "CDSC":  2.4e-4,        # Drain/Source and channel coupling capacitance (F/m^2)
+        "CDSCB":  0.0,          # Body-bias dependence of cdsc (F/V/m^2)
+        "CDSCD":  0.0,          # Drain-bias dependence of cdsc (F/V/m^2)
+        "CIT":  0.0,            # Interface state capacitance
+        "NFACTOR":  0.0,        # Subthreshold swing coefficient
+        "XJ":  1.5e-7,          # Junction depth (m)
+        "VSAT":  8.0e4,         # Saturationvelocity at tnom (m/sec)
+        "AT":  3.3e4,           # Temperature coefficient of vsat (m/sec)
+        "A0":  1.0,             # Non-uniform depletion width effect coefficient
+        "AGS":  0.0,            # Gate bias coefficient of Abulk
+        "A1":  0.0,             # Non-saturation effect coefficient
+        "A2":  1.0,             # Non-saturation effect coefficient
+        "KETA":  -0.047,        # Body-bias coefficient of non-uniform depletion width effect
+        "NSUB":  6e16,          # Substrate doping concentration
+        "NCH":  1.7e17,         # Channel doping concentration
+        "GAMMA1":  None,        # Body effect coefficient near the surface
+        "GAMMA2":  None,        # Body effect coefficient in the bulk
+        "VBX":  None,           # Vbs at which the depletion width = XT
+        "NGATE":  0.0,          # Poly-gate doping concentration (cm^-3)
+        "VBM":  -3.0,           # Maximum body voltage (V)
+        "XT":  1.55e-7,         # Doping depth
+        "KT1":  -0.11,          # Temperature coefficient of Vth (V)
+        "KT1L":  0.0,           # Temperature coefficient of Vth, channel length dependence (V.m)
+        "KT2":  0.022,          # Body-coefficient of kt1 (-)
+        "K3":  80.0,            # Narrow width effect coefficient
+        "K3B":  0.0,            # Body effect coefficient of k3
+        "W0":  2.5e-6,          # Narrow width effect parameter (m)
+        "NLX":  1.74e-7,        # Lateral non-uniform doping effect (m)
+        "DVT0":  2.2,           # Short channel effect coefficient 0 (-)
+        "DVT1":  0.53,          # Short channel effect coefficient 1 (-)
+        "DVT2":  -0.032,        # Short channel effect coefficient 2 (V^-1)
+        "DVT0W":  0.0,          # Narrow width effect coefficient 0 (m^-1)
+        "DVT1W":  5.3e6,        # Narrow width effect coefficient 1 (m^-1)
+        "DVT2W":  -0.032,       # Narrow width effect body-bias coefficient (V^-1)
+        "DROUT":  0.0,          # DIBL coefficient of output resistance
+        "DSUB":  None,          # DIBL coefficient in the subthreshold region
+        "UA":  2.25e-9,         # Linear gate dependence of mobility (m/V)
+        "UB":  5.87e-19,        # Quadratic gate dependence of mobility (m/V)^2
+        "UC":  -4.65e-11,       # Body-bias dependence of mobility (m/V^2)
+        "U0":  670.0,           # Low-field mobility at Tnom (cm^2/V/s)
+        "VOFF":  -0.08,         # Threshold voltage offset (V)
+        "TNOM": 25.0,           # Parameter measurement temperature (deg C)
+        "ELM":  0.0,            # Non-quasi-static Elmore Constant Parameter
+        "DELTA":  0.01,         # Effective Vds parameter (V)
+        "RDSW":  0.0,           # Sorce-drain resistance per width
+        "PRWG":  0.0,           # Gate-bias effect on parasitic resistance
+        "PRWB":  0.0,           # Body-effect on parasitic resistance
+        "PRT":  0.0,            # Temperature coefficient of parasitic resistance
+        "ETA0":  0.08,          # Subthreshold region DIBL coefficeint
+        "ETAB":  -0.07,         # Subthreshold region DIBL body-bias coefficeint (1/V)
+        "PCLM":  1.3,           # Channel length modulation coefficient (-)
+        "PDIBLC1":  0.39,       # Drain-induced barrier lowering oefficient
+        "PDIBLC2":  0.0086,     # Drain-induced barrier lowering oefficient
+        "PDIBLCB":  0.0,        # Body-effect on drain induced barrier lowering
+        "PSCBE1":  4.24e8,      # Substrate current body-effect coeffiecient (V/m)
+        "PSCBE2":  1.0e-5,      # Substrate current body-effect coeffiecient (m/V)
+        "PVAG":  0.0,           # Gate dependence of output resistance parameter (-)
+        "VFB":  -1.0,           # Flat band voltage
+        "ACDE":  0.0,           # Exponential coefficient for finite charge thickness
+        "MOIN":  0.0,           # Coefficient for gate-bias dependent surface potential
+        "NOFF":  0.0,           # C-V turn-on/off parameter
+        "VOFFCV":  0.0,         # C-V lateral shift parameter
+        "LINT":  0.0,           # Length reduction parameter (m)
+        "LL":  0.0,             # Length reduction parameter
+        "LLC":  0.0,            # Length reduction parameter for CV
+        "LLN":  0.0,            # Length reduction parameter
+        "LW":  0.0,             # Length reduction parameter
+        "LWC":  0.0,            # Length reduction parameter for CV
+        "LWN":  0.0,            # Length reduction parameter
+        "LWL":  0.0,            # Length reduction parameter
+        "LWLC":  0.0,           # Length reduction parameter for CV
+        "WR":  1.0,             # Width dependence of rds (-)
+        "WINT":  0.0,           # Width reduction parameter (m)
+        "DWG":  0.0,            # Width reduction gate bias dependence (m/V)
+        "DWB":  0.0,            # Width reduction body bias dependence (m/V)
+        "WL":  0.0,             # Width reduction parameter
+        "WLC":  0.0,            # Width reduction parameter for CV
+        "WLN":  0.0,            # Width reduction parameter
+        "WW":  0.0,             # Width reduction parameter
+        "WWC":  0.0,            # Width reduction parameter for CV
+        "WWN":  0.0,            # Width reduction parameter
+        "WWL":  0.0,            # Width reduction parameter
+        "WWLC":  0.0,           # Width reduction parameter for CV
+        "B0":  0.0,             # Abulk narrow width parameter
+        "B1":  0.0,             # Abulk narrow width parameter
+        "CLC":  0.0,            # Vdsat paramater for C-V model
+        "CLE":  0.0,            # Vdsat paramater for C-V model
+        "ALPHA0":  0.0,         # Substrate current model parameter (m/V)
+        "ALPHA1":  0.0,         # Substrate current model parameter (1/V)
+        "BETA0":  30.0,         # Diode limiting current (V)
+        "UTE":  -1.5,           # Temperature exponent of mobility (-)
+        "K1":  0.5,             # First order body effect coefficient (V^0.5)
+        "K2":  0.0,             # Second order body effect coefficient (-)
+        "TEMP": 100,            # Circuit temperature
+        "UA1":  4.31e-9,        # Temperature coefficient for ua in m/V
+        "UB1":  -7.61e-18,      # Temperature coefficient for ub in (m/V)^2
+        "UC1":  -5.6e-11,       # Temperature coefficient for uc in m/V^2
+        "A2KETA": 0.0,
+        "XL": 0.0,
+        "XW": 0.0,
+        }
+
+    LWP_Deps = [
+         'CDSC',    'CDSCB',    'CDSCD',
+         'CIT',     'NFACTOR',  'VSAT',
+         'A0',      'AGS',      'A1',       'A2'
+         'KETA',    'NGATE',    'K1',       'K2',
+         'VTH0',
+         'UA',      'UB',       'UC',       'U0',
+         'VOFF',    'DELTA',
+         'RDSW',    'PRWG',     'PRWB',
+         'ETA0',    'ETAB',
+         'PCLM',    'PDIBLC1',  'PDIBLC2',
+         'PSCBE1',  'PSCBE2',
+         'WR',      'AT',       'KT1',     'KT2',
+         'UTE',     'UA1',      'UB1',     'UC1',
+         'PRT']
+    L_Deps = [
+         'CGSL',    'CGDL',
+         'CKAPPA',  'CF',       'CLC',     'CLE',
+         'VOFFCV',  'NOFF',     'ACDE',    'MOIN']
+
     def __init__(self, **kwargs):
         kwArgs={}
         for k,v in kwargs.iteritems():
             kwArgs[string.upper(k)] = v
 
-        self.L      = kwArgs.get("L", 1.0e-6)           # Length (m)
-        self.W      = kwArgs.get("W", 1.0e-6)           # Width (m)
-        self.TOX    = kwArgs.get("TOX", 1.5e-8)         # Gate oxide thickness (m)
-        self.TOXM   = kwArgs.get("TOXM", self.TOX)      # Gate oxide thickness used in extraction
-        self.VTH0   = kwArgs.get("VTH0", 0.7)           # Threshold voltage @VBS=0 for large L
-        self.CDSC   = kwArgs.get("CDSC", 2.4e-4)        # Drain/Source and channel coupling capacitance (F/m^2)
-        self.CDSCB  = kwArgs.get("CDSCB", 0.0)          # Body-bias dependence of cdsc (F/V/m^2)
-        self.CDSCD  = kwArgs.get("CDSCD", 0.0)          # Drain-bias dependence of cdsc (F/V/m^2)
-        self.CIT    = kwArgs.get("CIT", 0.0)            # Interface state capacitance
-        self.NFACTOR= kwArgs.get("NFACTOR", 0.0)        # Subthreshold swing coefficient
-        self.LNFACTOR= kwArgs.get("LNFACTOR", 0.0)      # Subthreshold swing coefficient, Leff dependence
-        self.WNFACTOR= kwArgs.get("WNFACTOR", 0.0)      # Subthreshold swing coefficient, Weff dependence
-        self.XJ     = kwArgs.get("XJ", 1.5e-7)          # Junction depth (m)
-        self.VSAT   = kwArgs.get("VSAT", 8.0e4)         # Saturationvelocity at tnom (m/sec)
-        self.LVSAT  = kwArgs.get("LVSAT", 0.0)          # Saturationvelocity at tnom, Leff dep 
-        self.WVSAT  = kwArgs.get("WVSAT", 0.0)          # Saturationvelocity at tnom, Weff dep 
-        self.PVSAT  = kwArgs.get("PVSAT", 0.0)          # Saturationvelocity at tnom, Leff.Weff dep 
-        self.AT     = kwArgs.get("AT", 3.3e4)           # Temperature coefficient of vsat (m/sec)
-        self.A0     = kwArgs.get("A0", 1.0)             # Non-uniform depletion width effect coefficient
-        self.AGS    = kwArgs.get("AGS", 0.0)            # Gate bias coefficient of Abulk
-        self.A1     = kwArgs.get("A1", 0.0)             # Non-saturation effect coefficient
-        self.A2     = kwArgs.get("A2", 1.0)             # Non-saturation effect coefficient
-        self.KETA   = kwArgs.get("KETA", -0.047)        # Body-bias coefficient of non-uniform depletion width effect
-        self.NSUB   = kwArgs.get("NSUB", 6e16)          # Substrate doping concentration
-        self.NCH    = kwArgs.get("NCH", 1.7e17)         # Channel doping concentration
-        self.GAMMA1 = kwArgs.get("GAMMA1", None)        # Body effect coefficient near the surface
-        self.GAMMA2 = kwArgs.get("GAMMA2", None)        # Body effect coefficient in the bulk
-        self.VBX    = kwArgs.get("VBX", None)           # Vbs at which the depletion width = XT
-        self.NGATE  = kwArgs.get("NGATE", 0.0)          # Poly-gate doping concentration (cm^-3)
-        self.VBM    = kwArgs.get("VBM", -3.0)           # Maximum body voltage (V)
-        self.XT     = kwArgs.get("XT", 1.55e-7)         # Doping depth
-        self.KT1    = kwArgs.get("KT1", -0.11)          # Temperature coefficient of Vth (V)
-        self.KT1L   = kwArgs.get("KT1L", 0.0)           # Temperature coefficient of Vth, channel length dependence (V.m)
-        self.KT2    = kwArgs.get("KT2", 0.022)          # Body-coefficient of kt1 (-)
-        self.K3     = kwArgs.get("K3", 80.0)            # Narrow width effect coefficient
-        self.K3B    = kwArgs.get("K3B", 0.0)            # Body effect coefficient of k3
-        self.W0     = kwArgs.get("W0", 2.5e-6)          # Narrow width effect parameter (m)
-        self.NLX    = kwArgs.get("NLX", 1.74e-7)        # Lateral non-uniform doping effect (m)
-        self.DVT0   = kwArgs.get("DVT0", 2.2)           # Short channel effect coefficient 0 (-)
-        self.DVT1   = kwArgs.get("DVT1", 0.53)          # Short channel effect coefficient 1 (-)
-        self.DVT2   = kwArgs.get("DVT2", -0.032)        # Short channel effect coefficient 2 (V^-1)
-        self.DVT0W  = kwArgs.get("DVT0W", 0.0)          # Narrow width effect coefficient 0 (m^-1)
-        self.DVT1W  = kwArgs.get("DVT1W", 5.3e6)        # Narrow width effect coefficient 1 (m^-1)
-        self.DVT2W  = kwArgs.get("DVT2W", -0.032)       # Narrow width effect body-bias coefficient (V^-1)
-        self.DROUT  = kwArgs.get("DROUT", 0.0)          # DIBL coefficient of output resistance
-        self.DSUB   = kwArgs.get("DSUB", self.DROUT)    # DIBL coefficient in the subthreshold region
-        self.UA     = kwArgs.get("UA", 2.25e-9)         # Linear gate dependence of mobility (m/V)
-        self.LUA    = kwArgs.get("LUA", 0.0)            # Linear gate dependence of mobility, Leff dep
-        self.WUA    = kwArgs.get("WUA", 0.0)            # Linear gate dependence of mobility, Weff dep
-        self.PUA    = kwArgs.get("PUA", 0.0)            # Linear gate dependence of mobility, Leff.Weff dep
-        self.UB     = kwArgs.get("UB", 5.87e-19)        # Quadratic gate dependence of mobility (m/V)^2
-        self.LUB    = kwArgs.get("LUB", 0.0)            # Quadratic gate dependence of mobility, Leff dep
-        self.WUB    = kwArgs.get("WUB", 0.0)            # Quadratic gate dependence of mobility, Weff dep
-        self.PUB    = kwArgs.get("PUB", 0.0)            # Quadratic gate dependence of mobility, Leff.Weff dep
-        self.UC     = kwArgs.get("UC", -4.65e-11)       # Body-bias dependence of mobility (m/V^2)
-        self.LUC    = kwArgs.get("LUC", 0.0)            # Body-bias dependence of mobility, Leff dep
-        self.WUC    = kwArgs.get("WUC", 0.0)            # Body-bias dependence of mobility, Weff dep
-        self.PUC    = kwArgs.get("PUC", 0.0)            # Body-bias dependence of mobility, Leff.Weff dep
-        self.U0     = kwArgs.get("U0", 670.0)           # Low-field mobility at Tnom (cm^2/V/s)
-        self.LU0    = kwArgs.get("LU0", 0.0)            # Low-field mobility at Tnom, Leff dep.
-        self.WU0    = kwArgs.get("WU0", 0.0)            # Low-field mobility at Tnom, Weff dep.
-        self.PU0    = kwArgs.get("PU0", 0.0)            # Low-field mobility at Tnom, Leff.Weff dep.
-        self.VOFF   = kwArgs.get("VOFF", -0.08)         # Threshold voltage offset (V)
-        self.LVOFF  = kwArgs.get("LVOFF", 0.0)          # Threshold voltage offset (V.m)
-        self.WVOFF  = kwArgs.get("WVOFF", 0.0)          # Threshold voltage offset (V.m)
-        self.TNOM   = kwArgs.get("TNOM", 25.0) + 273.15 # Parameter measurement temperature (deg C)
-        self.ELM    = kwArgs.get("ELM", 0.0)            # Non-quasi-static Elmore Constant Parameter
-        self.DELTA  = kwArgs.get("DELTA", 0.01)         # Effective Vds parameter (V)
-        self.RDSW   = kwArgs.get("RDSW", 0.0)           # Sorce-drain resistance per width
-        self.PRWG   = kwArgs.get("PRWG", 0.0)           # Gate-bias effect on parasitic resistance
-        self.PRWB   = kwArgs.get("PRWB", 0.0)           # Body-effect on parasitic resistance
-        self.PRT    = kwArgs.get("PRT", 0.0)            # Temperature coefficient of parasitic resistance
-        self.ETA0   = kwArgs.get("ETA0", 0.08)          # Subthreshold region DIBL coefficeint
-        self.ETAB   = kwArgs.get("ETAB", -0.07)         # Subthreshold region DIBL body-bias coefficeint (1/V)
-        self.PCLM   = kwArgs.get("PCLM", 1.3)           # Channel length modulation coefficient (-)
-        self.PDIBLC1= kwArgs.get("PDIBLC1", 0.39)       # Drain-induced barrier lowering oefficient
-        self.PDIBLC2= kwArgs.get("PDIBLC2", 0.0086)     # Drain-induced barrier lowering oefficient
-        self.PDIBLCB= kwArgs.get("PDIBLCB", 0.0)        # Body-effect on drain induced barrier lowering
-        self.PSCBE1 = kwArgs.get("PSCBE1", 4.24e8)      # Substrate current body-effect coeffiecient (V/m)
-        self.PSCBE2 = kwArgs.get("PSCBE2", 1.0e-5)      # Substrate current body-effect coeffiecient (m/V)
-        self.PVAG   = kwArgs.get("PVAG", 0.0)           # Gate dependence of output resistance parameter (-)
-        self.VFB    = kwArgs.get("VFB", -1.0)           # Flat band voltage
-        self.ACDE   = kwArgs.get("ACDE", 0.0)           # Exponential coefficient for finite charge thickness
-        self.MOIN   = kwArgs.get("MOIN", 0.0)           # Coefficient for gate-bias dependent surface potential
-        self.NOFF   = kwArgs.get("NOFF", 0.0)           # C-V turn-on/off parameter
-        self.VOFFCV = kwArgs.get("VOFFCV", 0.0)         # C-V lateral shift parameter
-        self.LINT   = kwArgs.get("LINT", 0.0)           # Length reduction parameter (m)
-        self.LL     = kwArgs.get("LL", 0.0)             # Length reduction parameter
-        self.LLC    = kwArgs.get("LLC", 0.0)            # Length reduction parameter for CV
-        self.LLN    = kwArgs.get("LLN", 0.0)            # Length reduction parameter
-        self.LW     = kwArgs.get("LW", 0.0)             # Length reduction parameter
-        self.LWC    = kwArgs.get("LWC", 0.0)            # Length reduction parameter for CV
-        self.LWN    = kwArgs.get("LWN", 0.0)            # Length reduction parameter
-        self.LWL    = kwArgs.get("LWL", 0.0)            # Length reduction parameter
-        self.LWLC   = kwArgs.get("LWLC", 0.0)           # Length reduction parameter for CV
-        self.WR     = kwArgs.get("WR", 1.0)             # Width dependence of rds (-)
-        self.WINT   = kwArgs.get("WINT", 0.0)           # Width reduction parameter (m)
-        self.DWG    = kwArgs.get("DWG", 0.0)            # Width reduction gate bias dependence (m/V)
-        self.DWB    = kwArgs.get("DWB", 0.0)            # Width reduction body bias dependence (m/V)
-        self.WL     = kwArgs.get("WL", 0.0)             # Width reduction parameter
-        self.WLC    = kwArgs.get("WLC", 0.0)            # Width reduction parameter for CV
-        self.WLN    = kwArgs.get("WLN", 0.0)            # Width reduction parameter
-        self.WW     = kwArgs.get("WW", 0.0)             # Width reduction parameter
-        self.WWC    = kwArgs.get("WWC", 0.0)            # Width reduction parameter for CV
-        self.WWN    = kwArgs.get("WWN", 0.0)            # Width reduction parameter
-        self.WWL    = kwArgs.get("WWL", 0.0)            # Width reduction parameter
-        self.WWLC   = kwArgs.get("WWLC", 0.0)           # Width reduction parameter for CV
-        self.B0     = kwArgs.get("B0", 0.0)             # Abulk narrow width parameter
-        self.B1     = kwArgs.get("B1", 0.0)             # Abulk narrow width parameter
-        self.CLC    = kwArgs.get("CLC", 0.0)            # Vdsat paramater for C-V model
-        self.CLE    = kwArgs.get("CLE", 0.0)            # Vdsat paramater for C-V model
-        self.ALPHA0 = kwArgs.get("ALPHA0", 0.0)         # Substrate current model parameter (m/V)
-        self.ALPHA1 = kwArgs.get("ALPHA1", 0.0)         # Substrate current model parameter (1/V)
-        self.BETA0  = kwArgs.get("BETA0", 30.0)         # Diode limiting current (V)
-        self.UTE    = kwArgs.get("UTE", -1.5)           # Temperature exponent of mobility (-)
-        self.K1     = kwArgs.get("K1", 0.5)             # First order body effect coefficient (V^0.5)
-        self.LK1    = kwArgs.get("LK1", 0.0)            # First order body effect coefficient, Leff dep
-        self.WK1    = kwArgs.get("WK1", 0.0)            # First order body effect coefficient, Leff dep
-        self.PK1    = kwArgs.get("PK1", 0.0)            # First order body effect coefficient, Leff dep
-        self.K2     = kwArgs.get("K2", 0.0)             # Second order body effect coefficient (-)
-        self.TEMP   = kwArgs.get("TEMP", 100.)+273.15   # Circuit temperature
-        self.UA1    = kwArgs.get("UA1", 4.31e-9)        # Temperature coefficient for ua in m/V
-        self.UB1    = kwArgs.get("UB1", -7.61e-18)      # Temperature coefficient for ub in (m/V)^2
-        self.UC1    = kwArgs.get("UC1", -5.6e-11)       # Temperature coefficient for uc in m/V^2
+        for k,v in self.Param_Defs.iteritems():
+            self.__dict__[k] = kwArgs.get(k, v)
+
+        if not self.TOXM: self.TOXM = self.TOX
+        if not self.DSUB: self.TOXM = self.DROUT
+        if self.U0>1.0: self.U0 *= 1e-4
+        self.TNOM += 273.15
+        self.TEMP += 273.15
 
         fac_scaling    = sqrt(epsSi/epsOx * self.TOX)
         Vtm0           = kboq * self.TNOM              # nominal thermal voltage
@@ -159,6 +171,10 @@ class MOSBSim3v3(CircuitElem):
         ni             = 1.45e10 * (self.TNOM / 300.15) * sqrt(self.TNOM / 300.15) * exp(21.5565981 - Eg0 / (2.0 * Vtm0))
 
         ###########  1  ############
+        #HSPICE XL/WL
+        self.Ldrn = self.L + self.XL
+        self.Wdrn = self.W + self.XW
+
         # effective length and width
         # see BSIM3v3 manual app-B-1.9
         t0 = pow(self.L, self.LLN)
@@ -174,8 +190,8 @@ class MOSBSim3v3(CircuitElem):
         tmp4 = self.WLC / t2 + self.WWC / t3 + self.WWLC / (t2 * t3)
         #dWc = self.DWC + tmp4
 
-        Leff = self.L - 2.0 * dL                   # effective channel length
-        Weff0 = self.W - 2.0 * dW                   # effective channel width
+        Leff = self.Ldrn - 2.0 * dL                   # effective channel length
+        Weff0 = self.Wdrn - 2.0 * dW                   # effective channel width
 
         invLeff = 1.0/Leff
         invWeff0 = 1.0/Weff0
@@ -184,18 +200,20 @@ class MOSBSim3v3(CircuitElem):
         #LeffCV = self.L - 2.0 * dLc
         ############################
 
-        if self.U0>1.0:
-            self.U0 *= 1e-4
+        # {{{ LWP dependent parameters
+        for k in self.LWP_Deps:
+            ldep = kwArgs.get('L'+k, 0.0)
+            wdep = kwArgs.get('W'+k, 0.0)
+            pdep = kwArgs.get('P'+k, 0.0)
+            v = self.__dict__[k]
+            self.__dict__[k] += ldep*invLeff + wdep*invWeff0 + pdep*invLWeff0
+            if not v==self.__dict__[k]:
+                print "FFFFF", k, v, self.__dict__[k]
 
-        self.NFACTOR += self.LNFACTOR*invLeff + self.WNFACTOR*invWeff0
-        self.VOFF    += self.LVOFF*invLeff + self.WVOFF*invWeff0
-        self.U0      += self.LU0*invLeff + self.WU0*invWeff0 + self.PU0*invLWeff0
-        self.UA      += self.LUA*invLeff + self.WUA*invWeff0 + self.PUA*invLWeff0
-        self.UB      += self.LUB*invLeff + self.WUB*invWeff0 + self.PUB*invLWeff0
-        self.UC      += self.LUC*invLeff + self.WUC*invWeff0 + self.PUC*invLWeff0
-        
-        self.K1      += self.LK1*invLeff + self.WK1*invWeff0 + self.PK1*invLWeff0
-        self.VSAT    += self.LVSAT*invLeff + self.WVSAT*invWeff0 + self.PVSAT*invLWeff0
+        #for k in self.LWP_Deps:
+        #    ldep = kwArgs.get('L'+k, 0.0)
+        #    self.__dict__[k] += ldep*invLeff
+        # }}}
 
         ###########  2  ############
         # saturation velocity
@@ -215,7 +233,7 @@ class MOSBSim3v3(CircuitElem):
 
         # bulk potential and its powers
         phi = 2.0 * Vtm0 * log(self.NCH / ni)
-        sqrtPhi = sqrt(phi);
+        sqrtPhi = sqrt(phi)
 
         # built-in potential, depletion length
         Xdep0   = sqrt(2.0 * epsSi / (q0 * self.NCH * 1.0e6)) * sqrtPhi # depletion width
@@ -523,13 +541,14 @@ class MOSBSim3v3(CircuitElem):
 
 if __name__=='__main__':
     mos = MOSBSim3v3(
-        L = 0.19e-6, W=10e-6, TEMP=25,
+        L = 0.19e-6, W=10e-6, TEMP=125.,
         TOX      = 3.87E-09,            TOXM     = 3.87E-09,            XJ       = 1.6000000E-07,
         NCH      = 3.8694000E+17,       LLN      = 1.1205959,           LWN      = 0.9200000,
         WLN      = 1.0599999,           WWN      = 0.8768474,           LINT     = 1.5757085E-08,
         LL       = 2.6352781E-16,       LW       = -2.2625584E-16,      LWL      = -2.0576711E-22,
         WINT     = -1.4450482E-09,      WL       = -2.3664573E-16,      WW       = -3.6409690E-14,
-        WWL      = -4.0000000E-21,      MOBMOD   = 1,                   DWG      = -5.9600000E-09,
+        WWL      = -4.0000000E-21,      MOBMOD   = 1,
+        XL       = 1.8E-8,              XW       = 0.00,                DWG      = -5.9600000E-09,
         DWB      = 4.5000000E-09,
         ##### Vth parameter
         VTH0     = 0.39,                WVTH0    = -2.9709472E-08,      PVTH0    = 5.0000000E-16,
@@ -568,7 +587,7 @@ if __name__=='__main__':
 
     for Vbs in [0.]:
         for j in xrange(1):
-            Vds = 1.8
+            Vds = 0.05
             for k in xrange(41):
                 Vgs = 0.05*k
                 Ids = mos._Ids(Vgs,Vds,Vbs)
