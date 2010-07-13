@@ -125,9 +125,23 @@ class MOSBSim3v3(CircuitElem):
         "UA1":  4.31e-9,        # Temperature coefficient for ua in m/V
         "UB1":  -7.61e-18,      # Temperature coefficient for ub in (m/V)^2
         "UC1":  -5.6e-11,       # Temperature coefficient for uc in m/V^2
+        "IJTH": 0.1,            # Diode limiting current (A)
+        "JS": 1e-4,            # Source drain junction saturation current per unit area (A/m^2)
+        "JSSW": 0.0,           # Side wall saturation current density (A/m)
+        "RSH": 0.0,             # Source drain sheet resistance (ohm/square)
+        "NJ": 1.0,              # Emission coefficient of junction
+        "XTI": 3.0,             # Junction current temperature exponent coefficient
+        "HDIF": 0.0,            # length of heavy diffusion region (m)
+        "WMLT": 1.0,            # width multiplier
         "A2KETA": 0.0,
         "XL": 0.0,
         "XW": 0.0,
+        "AS": 0.0,
+        "AD": 0.0,
+        "PS": 0.0,
+        "PD": 0.0,
+        "BINUNIT": 1,
+        "CALCACM": 1,
         }
 
     LWP_Deps = [
@@ -168,6 +182,7 @@ class MOSBSim3v3(CircuitElem):
         Vtm0           = kboq * self.TNOM              # nominal thermal voltage
         Vtm            = kboq * self.TEMP              # thermal voltage
         Eg0            = 1.16 - (7.02e-4 * self.TNOM * self.TNOM) / (self.TNOM + 1108.0)
+        Eg             = 1.16 - (7.02e-4 * self.TEMP * self.TEMP) / (self.TEMP + 1108.0)
         ni             = 1.45e10 * (self.TNOM / 300.15) * sqrt(self.TNOM / 300.15) * exp(21.5565981 - Eg0 / (2.0 * Vtm0))
 
         ###########  1  ############
@@ -193,26 +208,52 @@ class MOSBSim3v3(CircuitElem):
         Leff = self.Ldrn - 2.0 * dL                   # effective channel length
         Weff0 = self.Wdrn - 2.0 * dW                   # effective channel width
 
-        invLeff = 1.0/Leff
-        invWeff0 = 1.0/Weff0
-        invLWeff0 = 1.0/(Leff * Weff0)
-
         #LeffCV = self.L - 2.0 * dLc
         ############################
 
         # {{{ LWP dependent parameters
+        if self.BINUNIT==1 :
+            invLeff = 1.0/Leff
+            invWeff0 = 1.0/Weff0
+            invLWeff0 = 1.0/(Leff * Weff0)
+        else:
+            invLeff = 1e-6/Leff
+            invWeff0 = 1e-6/Weff0
+            invLWeff0 = 1e-12/(Leff * Weff0)
+
         for k in self.LWP_Deps:
             ldep = kwArgs.get('L'+k, 0.0)
             wdep = kwArgs.get('W'+k, 0.0)
             pdep = kwArgs.get('P'+k, 0.0)
             v = self.__dict__[k]
             self.__dict__[k] += ldep*invLeff + wdep*invWeff0 + pdep*invLWeff0
-            if not v==self.__dict__[k]:
-                print "FFFFF", k, v, self.__dict__[k]
 
         #for k in self.LWP_Deps:
         #    ldep = kwArgs.get('L'+k, 0.0)
         #    self.__dict__[k] += ldep*invLeff
+        # }}}
+
+        # {{{ S/D Capacitance area calculation
+        if self.CALCACM==1:
+            Weff_diode = self.W * self.WMLT + self.XW
+            HDIFeff = self.HDIF * self.WMLT
+            if kwArgs.has_key('AD'):
+                self.AD *= self.WMLT*self.WMLT
+            else:
+                self.AD = 2. * HDIFeff * Weff_diode
+            if kwArgs.has_key('AS'):
+                self.AS *= self.WMLT*self.WMLT
+            else:
+                self.AS = 2. * HDIFeff * Weff_diode
+
+            if kwArgs.has_key('PS'):
+                self.PS *= self.WMLT
+            else:
+                self.PS = 4. * HDIFeff + 2. * Weff_diode
+            if kwArgs.has_key('PD'):
+                self.PD *= self.WMLT
+            else:
+                self.PD = 4. * HDIFeff + 2. * Weff_diode
         # }}}
 
         ###########  2  ############
@@ -272,6 +313,14 @@ class MOSBSim3v3(CircuitElem):
         else:
             self.VTH0 = self.VFB + phi + K1 * sqrtPhi
 
+        # diode current
+        t0 = Eg0/Vtm0 - Eg/Vtm + self.XTI * log(self.TEMP/self.TNOM)
+        t1 = exp(t0/self.NJ)
+        Js = self.JS * t1
+        Jssw = self.JSSW * t1
+        Isbs = self.AS * Js + self.PS * Jssw
+        Isbd = self.AD * Js + self.PD * Jssw
+
         #########
         self.fac_scaling    = fac_scaling
         self.Leff           = Leff
@@ -291,8 +340,10 @@ class MOSBSim3v3(CircuitElem):
         self.Rds0           = Rds0
         self.litl           = litl
         self.Cdep0          = Cdep0
+        self.Isbs           = Isbs
+        self.Isbd           = Isbd
 
-    def _Ids(self, VGS, VDS, VBS):
+    def _DC_Curr(self, VGS, VDS, VBS):
         Leff                = self.Leff
         Weff0               = self.Weff0
         fac_scaling         = self.fac_scaling
@@ -312,6 +363,8 @@ class MOSBSim3v3(CircuitElem):
         Lt0                 = self.Lt0
         litl                = self.litl
         Cdep0               = self.Cdep0
+        Isbs                = self.Isbs
+        Isbd                = self.Isbd
 
         Vbc = 0.9 * ( self.phi - pow(0.5*K1/K2, 2.) )
 
@@ -488,6 +541,8 @@ class MOSBSim3v3(CircuitElem):
         if VDS==0.0:
             Vdseff=0.0
 
+        diffVds = VDS - Vdseff
+
         # VAsat
         t0 = 1.0 - 0.5 * Abulk*Vdsat / Vgst2Vtm
         t1 = Esat*Leff + Vdsat + 2. * WVCoxRds * Vgsteff * t0
@@ -495,7 +550,7 @@ class MOSBSim3v3(CircuitElem):
         Vasat = t1/t2
 
         # VA_CLM
-        VaCLM = (Abulk*Esat*Leff + Vgsteff) / ( self.PCLM*Abulk*Esat*litl ) * (Vds-Vdseff)
+        VaCLM = (Abulk*Esat*Leff + Vgsteff) / ( self.PCLM*Abulk*Esat*litl ) * diffVds
 
         # VA_DIBLC
         t0 = exp(-0.5*self.DROUT*Leff/Lt0)
@@ -513,8 +568,7 @@ class MOSBSim3v3(CircuitElem):
         Va = Vasat + t0 / (1./VaCLM + 1./VaDIBLC)
 
         # one over VaSCBE
-        rcpVaSCBE = self.PSCBE2/Leff * exp(-self.PSCBE1*litl/(VDS-Vdseff))
-
+        rcpVaSCBE = self.PSCBE2/Leff * exp(-self.PSCBE1*litl/diffVds)
 
         # Calculation of Ids
         CoxWovL = Cox * Weff / Leff
@@ -526,10 +580,40 @@ class MOSBSim3v3(CircuitElem):
         t0 = Vdseff / (1.0 + gche * Rds)
         Idl = gche * t0
 
-        Idsa = Idl * (1.0 + (VDS-Vdseff) / Va)
-        Ids = Idsa * (1.0 + (VDS-Vdseff) * rcpVaSCBE)
+        Idsa = Idl * (1.0 + diffVds / Va)
+        Ids = Idsa * (1.0 + diffVds * rcpVaSCBE)
 
-        return Ids
+        # Substrate current
+        Isub = (self.ALPHA0 + self.ALPHA1*Leff)/Leff * diffVds * exp(-self.BETA0/diffVds) * Idsa
+
+        # diode current
+        NVtm = self.NJ * Vtm
+        if Isbs>0.0:
+            if self.IJTH==0.0:
+                Ibs = Isbs*(exp(VBS/NVtm)-1.)
+            else:
+                Vjsm = NVtm * log(self.IJTH/Isbs+1.)
+                if VBS<Vjsm:
+                    Ibs = Isbs*(exp(VBS/NVtm)-1.)
+                else:
+                    Ibs = self.IJTH + (self.IJTH+Isbs)/NVtm * (VBS-Vjsm)
+        else:
+            Ibs = 0.0
+
+        if Isbd>0.0:
+            VBD = VBS-VDS
+            if self.IJTH==0.0:
+                Ibd = Isbd*(exp(VBD/NVtm)-1.)
+            else:
+                Vjdm = NVtm * log(self.IJTH/Isbd+1.)
+                if VBD<Vjdm:
+                    Ibd = Isbd*(exp(VBD/NVtm)-1.)
+                else:
+                    Ibd = self.IJTH + (self.IJTH+Isbd)/NVtm * (VBD-Vjdm)
+        else:
+            Ibd = 0.0
+
+        return (Ids+Isub-Ibd, -Ids-Ibs, Isub+Ibs+Ibd)
 
     def calcFunJac(self, state):
         VD, VG, VS, VB = state.getVars(self.varIdx)
@@ -537,11 +621,11 @@ class MOSBSim3v3(CircuitElem):
         VGS = VG - VS
         VBS = VB - VS
 
-        Ids = self._Ids(VGS, VDS, VBS)
+        Id, Is, Isub = self._Ids(VGS, VDS, VBS)
 
 if __name__=='__main__':
     mos = MOSBSim3v3(
-        L = 0.19e-6, W=10e-6, TEMP=125.,
+        L = 0.19e-6, W=10e-6, TEMP=25.,
         TOX      = 3.87E-09,            TOXM     = 3.87E-09,            XJ       = 1.6000000E-07,
         NCH      = 3.8694000E+17,       LLN      = 1.1205959,           LWN      = 0.9200000,
         WLN      = 1.0599999,           WWN      = 0.8768474,           LINT     = 1.5757085E-08,
@@ -550,6 +634,13 @@ if __name__=='__main__':
         WWL      = -4.0000000E-21,      MOBMOD   = 1,
         XL       = 1.8E-8,              XW       = 0.00,                DWG      = -5.9600000E-09,
         DWB      = 4.5000000E-09,
+        ##### DIODE PARAMETERS
+        CALCACM  = 1,
+        ACM      = 12,                  HDIF     = 2.00E-07,
+        RSH      = 7.08,                RD       = 0,                   RS       = 0,
+        RSC      = 1.7,                 RDC      = 1.7,
+        JS       = 3.52E-07,            JSW      = 3.0E-13,             NJ       = 1.0392,
+        XTI      = 3.25, 
         ##### Vth parameter
         VTH0     = 0.39,                WVTH0    = -2.9709472E-08,      PVTH0    = 5.0000000E-16,
         K1       = 0.6801043,           WK1      = -2.4896840E-08,      PK1      = 1.3000000E-15,
@@ -583,6 +674,7 @@ if __name__=='__main__':
         LUA1     = 6.0000000E-18,       WUA1     = -1.1000000E-16,      PUA1     = -5.0000000E-25,
         UB1      = -2.4000000E-18,      UC1      = -1.0000000E-10,      LUC1     = 1.6999999E-17,
         PUC1     = -3.0000000E-24,      KT1L     = -1.0000000E-09,      PRT      = -55.0000000,
+
             )
 
     for Vbs in [0.]:
@@ -590,8 +682,8 @@ if __name__=='__main__':
             Vds = 0.05
             for k in xrange(41):
                 Vgs = 0.05*k
-                Ids = mos._Ids(Vgs,Vds,Vbs)
-                print "%15g %15g %15g %15g" % (Vgs, Vds, Vbs, Ids)
+                Id, Is, Isub = mos._DC_Curr(Vgs,Vds,Vbs)
+                print "%15g %15g %15g %15g %15g" % (Vgs, Vds, Vbs, Id, Isub)
 
 #    for j in xrange(1,37):
 #        Vbs = 0.
@@ -600,4 +692,4 @@ if __name__=='__main__':
 #        Ids = mos._Ids(Vgs,Vds,Vbs)
 #        print Vgs, Vds, Vbs, Ids
 
-
+#-1.20150e-09
