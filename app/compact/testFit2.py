@@ -1,5 +1,5 @@
 from pyEDA.Compact.MOSParamFit import *
-from pyEDA.Compact.DevMeasData import *
+from pyEDA.Compact.BSPData import *
 import math
 from matplotlib import pyplot
 

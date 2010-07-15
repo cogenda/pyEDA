@@ -1,10 +1,94 @@
-__all__=[]
+__all__=['CurveSeries', 'BSP_MOSFET_Instance', 'makeInstance']
 
 from pyparsing import *
 import numpy as np
-from DevMeasData import MOSFET_Instance
-from DevMeasData import MOSFET_IV_Curve
-from DevMeasData import CurveSeries
+from DevMeasData import *
+
+class CurveSeries(object):
+    def __init__(self, label):
+        self.label = label
+        self.curves = []
+        self.VScan = None
+        self.IOut  = None
+
+    def __len__(self):
+        return len(self.curves)
+
+    def __getitem__(self, key):
+        '''
+        get a curve from the series,
+
+        @param key      index of the curve or a filter function.
+                        In the second case, each curve c is passed to the filter fn(c),
+                        if fn() yields True, c is returned.
+        '''
+        if isinstance(key, int):
+            idx = key
+            if idx>=0 and idx<len(self):
+                return self.curves[idx]
+            else:
+                raise IndexError
+        elif isinstance(key, dict):
+            cond = key
+            for c in self.curves:
+                flg = True
+                for n,v in cond.iteritems():
+                    if abs(c.VConsts[n]-v)>1e-8:
+                        flg = False
+                if flg:
+                    return c
+        elif callable(key):
+            fn = key
+            for c in self.curves:
+                if fn(c):
+                    return c
+        return None
+
+    def __setitem__(self, key, curve):
+        '''
+        '''
+        if not isinstance(key, int):
+            raise TypeError
+        if not isinstance(curve, IV_Curve):
+            raise TypeError
+
+        if self.VScan and self.IOut:
+            if not (curve.VScan==self.VScan and curve.IOut==self.IOut):
+                raise ValueError
+        else:
+            self.VScan = curve.VScan
+            self.IOut  = curve.IOut
+
+        if key==len(self):
+            self.curves.append(curve)
+        elif key>=0 and key<len(self):
+            self.curves[key] = curve
+        else:
+            raise IndexError
+
+    def append(self, curve):
+        self[len(self)] = curve
+
+
+class BSP_MOSFET_Instance(MOSFET_Instance):
+    def __init__(self, W=None, L=None, T=None):
+        super(BSP_MOSFET_Instance, self).__init__(W, L, T)
+        self.IVData = {}
+    
+    def mosID(self):
+        return (self.W, self.L, self.T)
+
+    def addIVSeries(self, label, series):
+        self.IVData[label] = series
+
+    def getIVSeries(self, label):
+        return self.IVData[label]
+
+    def listIVSeries(self):
+        return self.IVData.keys()
+
+    def loadBSimProFile(self, fname):
+        makeInstance(self, fname)
 
 
 real_number = Combine(Optional(oneOf("+ -")) + Word(nums) + 
@@ -127,6 +211,18 @@ def parseBSimProFile(fname):
             print len(dseries.data)
 
 
-if __name__=='__main__': 
-  parseBSimProFile('data/NEA1X10.DAT')
+if __name__=='__main__':
+    mos = BSP_MOSFET_Instance()
+    mos.loadBSimProFile('data/NEA1X10.DAT')
+    
+    for sLabel in mos.listIVSeries():
+        print 'Series:', sLabel
+        series = mos.getIVSeries(sLabel)
+        for i in xrange(len(series)):
+            curve = series[i]
+
+            print 'Curve --------------',len(curve)
+            for vbias, curr in curve.iterData():
+                print vbias, curr
+
 

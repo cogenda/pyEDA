@@ -2,7 +2,7 @@ __all__=['MOS_IV_Fit', 'MOS_FitProject']
 
 from pyEDA.PDE.AutoDeriv import *
 from pyEDA.Circuit.MOS3 import *
-from pyEDA.Compact.DevMeasData import *
+from pyEDA.Compact.BSPData import *
 
 import numpy as np
 from scipy.linalg import norm
@@ -172,7 +172,7 @@ class MOS_FitProject(object):
         self.datasets = {}
 
     def loadBSimProFile(self, name, fname):
-        ins = MOSFET_Instance()
+        ins = BSP_MOSFET_Instance()
         ins.loadBSimProFile(fname)
         self.datasets[name] = ins
 

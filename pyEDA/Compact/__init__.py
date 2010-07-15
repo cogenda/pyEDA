@@ -1,2 +1,2 @@
-__all__=['MOSParamFit', 'DevMeasData']
+__all__=['MOSParamFit', 'DevMeasData', 'BSPData', 'AuroraData']
 
