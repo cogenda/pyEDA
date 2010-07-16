@@ -58,4 +58,6 @@ class MOSFET_Instance(object):
         self.L = L
         self.T = T
 
+    def mosID(self):
+        return (self.W, self.L, self.T)
 

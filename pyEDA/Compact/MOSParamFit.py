@@ -2,7 +2,9 @@ __all__=['MOS_IV_Fit', 'MOS_FitProject']
 
 from pyEDA.PDE.AutoDeriv import *
 from pyEDA.Circuit.MOS3 import *
+from pyEDA.Circuit.BSIM3v3 import *
 from pyEDA.Compact.BSPData import *
+from pyEDA.Compact.AuroraData import *
 
 import numpy as np
 from scipy.linalg import norm
@@ -64,20 +66,24 @@ class CachedMOS(object):
         '''
         @param param        fitting parameters, numpy array, same order as in fitParam
         '''
-        if not self.mos == None  and self.fitParam ==None and np.allclose(param, self.param): 
+        #if self.mos and self.fitParam and np.allclose(param, self.param):
+
+        if self.mos and self.fitParam and np.array_equal(param, self.param):
             return  # no need to init
 
         if isinstance(param, np.float):
             self.param = np.array([param])
         else:
-            self.param = param
+            self.param = np.copy(param)
         self.cache = {}
 
         MOS_param = self.baseParam.copy()
         for i,name in enumerate(self.fitParam):
             MOS_param[name] = ADVar(self.param[i], i)
 
-        self.mos = MOSLv3(**MOS_param)
+        #self.mos = MOSLv3(**MOS_param)
+        self.mos = MOSBSim3v3(**MOS_param)
+
 
     def ids(self, param, vbias):
         self.initMOS(param)
@@ -85,9 +91,14 @@ class CachedMOS(object):
             return self.cache[vbias]
 
         Vgs, Vds, Vbs = vbias
-        ids = self.mos._Ids(Vgs, Vds, Vbs)
-        self.cache[vbias] = ids
-        return ids
+        #ids = self.mos._Ids(Vgs, Vds, Vbs)
+        #self.cache[vbias] = ids
+        #return ids
+
+        Id, Is, Isub  = self.mos._DC_Curr(Vgs,Vds,Vbs)
+        self.cache[vbias] = Id
+        return Id
+
 
 class MOS_IV_Fit(object):
     def __init__(self, baseParam, fitParam):
@@ -105,9 +116,11 @@ class MOS_IV_Fit(object):
         @param mosID    (W,L,T) tuple
         '''
         MOS_param = self.baseParam.copy()
-        MOS_param['W'] = mosID[0] * 1e-6
-        MOS_param['L'] = mosID[1] * 1e-6
-        MOS_param['T'] = mosID[2] + 273.15
+        if mosID[0]<1e-3:
+            MOS_param['W'] = mosID[0] * 1e-6
+        if mosID[1]<1e-3:
+            MOS_param['L'] = mosID[1] * 1e-6
+        #MOS_param['T'] = mosID[2] + 273.15
 
         if not self.mos.has_key(mosID):
             self.mos[mosID] = CachedMOS(MOS_param, self.fitParam.keys())
@@ -147,7 +160,7 @@ class MOS_IV_Fit(object):
     def doFit(self, plot=None):
         guess = self.fitParam.values()
 
-        result, success = leastsq(self.fun, guess, (), self.jac)
+        result, success = leastsq(self.fun, guess, (), self.jac, warning=True)
         if isinstance(result, np.float):
             result = [result]
         e = self.fun(result)
@@ -175,6 +188,13 @@ class MOS_FitProject(object):
         ins = BSP_MOSFET_Instance()
         ins.loadBSimProFile(fname)
         self.datasets[name] = ins
+
+    def loadAuroraFile(self, fname):
+        file = AuroraFile('data/0p35.dat')
+        file.make_instances()
+        inss = file.instances
+        for name,ins in inss.iteritems():
+            self.datasets[name] = ins
 
     def paramToStr(self, param):
         i=0

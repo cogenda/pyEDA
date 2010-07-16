@@ -75,9 +75,6 @@ class BSP_MOSFET_Instance(MOSFET_Instance):
         super(BSP_MOSFET_Instance, self).__init__(W, L, T)
         self.IVData = {}
     
-    def mosID(self):
-        return (self.W, self.L, self.T)
-
     def addIVSeries(self, label, series):
         self.IVData[label] = series
 
