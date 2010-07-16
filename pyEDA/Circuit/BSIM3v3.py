@@ -273,6 +273,9 @@ class MOSBSim3v3(CircuitElem):
             # see BSIM3v3 manual app-A, notes NI-4
             self.NCH = pow(self.GAMMA1 * Cox, 2.) / ( 2.*q0*epsSi )
 
+        if self.NCH <= ni:
+            self.NCH = float(ni)*10.
+
         # bulk potential and its powers
         phi = 2.0 * Vtm0 * log(self.NCH / ni)
         sqrtPhi = sqrt(phi)

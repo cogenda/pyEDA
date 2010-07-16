@@ -313,13 +313,21 @@ class ADVar(object):
         return r
     
 
+EXP_XMAX=200.
+EXP_YMAX=7.225973768125749e+86
 def exp(x):
     ''' exp(x), x is ADVar or scalar '''
     if not isinstance(x, ADVar):
-        return math.exp(x)
+        if x<EXP_XMAX:
+            return math.exp(x)
+        else:
+            return EXP_YMAX
     
     r = ADVar()
-    r.val = math.exp(x)
+    if x<EXP_XMAX:
+        r.val = math.exp(x)
+    else:
+        r.val = EXP_YMAX
     for i,dx in x.deriv:
         r.deriv.append( (i, r.val*dx) )
         

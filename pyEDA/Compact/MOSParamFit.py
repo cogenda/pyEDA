@@ -15,6 +15,9 @@ class MOS_IV_FitData(object):
     def __init__(self):
         # curves is a list of (mosID, MOS_IV_Curve)
         self.curves = []
+        self.subVth = False
+        self.curr_th=1e-6
+        self.curr_min=1e-12
 
     def __len__(self):
         cnt = 0
@@ -30,6 +33,8 @@ class MOS_IV_FitData(object):
             IOut = curve.IOut
             for vbias, curr in curve.iterData():
                 weight = 1.0
+                if self.subVth:
+                    weight = (self.curr_th+abs(curr))/max(abs(curr), self.curr_min)
                 yield (mosID, IOut, vbias, curr, weight)
 
     def plotData(self, plt, modelCalc=None):
@@ -45,9 +50,16 @@ class MOS_IV_FitData(object):
                 for i,v in enumerate(dataVScan):
                     vbias = curve.makeVBias(v)
                     dataModel[i] = modelCalc(mosID, curve.IOut, vbias)
-                plt.plot(dataVScan, dataCurr, '+', dataVScan, dataModel, '-')
+                if self.subVth:
+                    plt.semilogy(dataVScan, dataCurr, '+', dataVScan, dataModel, '-')
+                    plt.ylim(ymin=0.1*self.curr_min)
+                else:
+                    plt.plot(dataVScan, dataCurr, '+', dataVScan, dataModel, '-')
             else:
-                plt.plot(dataVScan, dataCurr, '+')
+                if self.subVth:
+                    plt.semilogy(dataVScan, dataCurr, '+')
+                else:
+                    plt.plot(dataVScan, dataCurr, '+')
 
 
 class CachedMOS(object):
@@ -190,7 +202,7 @@ class MOS_FitProject(object):
         self.datasets[name] = ins
 
     def loadAuroraFile(self, fname):
-        file = AuroraFile('data/0p35.dat')
+        file = AuroraFile(fname)
         file.make_instances()
         inss = file.instances
         for name,ins in inss.iteritems():
