@@ -173,7 +173,7 @@ class MOSBSim3v3(CircuitElem):
             self.__dict__[k] = kwArgs.get(k, v)
 
         if not self.TOXM: self.TOXM = self.TOX
-        if not self.DSUB: self.TOXM = self.DROUT
+        if not self.DSUB: self.DSUB = self.DROUT
         if self.U0>1.0: self.U0 *= 1e-4
         self.TNOM += 273.15
         self.TEMP += 273.15
@@ -222,15 +222,16 @@ class MOSBSim3v3(CircuitElem):
             invLWeff0 = 1e-12/(Leff * Weff0)
 
         for k in self.LWP_Deps:
-            ldep = kwArgs.get('L'+k, 0.0)
-            wdep = kwArgs.get('W'+k, 0.0)
-            pdep = kwArgs.get('P'+k, 0.0)
-            v = self.__dict__[k]
-            self.__dict__[k] += ldep*invLeff + wdep*invWeff0 + pdep*invLWeff0
+            if kwArgs.has_key('L'+k):
+                ldep = kwArgs['L'+k]
+                self.__dict__[k] += ldep*invLeff
+            if kwArgs.has_key('W'+k):
+                wdep = kwArgs['W'+k]
+                self.__dict__[k] += wdep*invWeff
+            if kwArgs.has_key('P'+k):
+                pdep = kwArgs['P'+k]
+                self.__dict__[k] += pdep*invLWeff0
 
-        #for k in self.LWP_Deps:
-        #    ldep = kwArgs.get('L'+k, 0.0)
-        #    self.__dict__[k] += ldep*invLeff
         # }}}
 
         # {{{ S/D Capacitance area calculation
@@ -366,7 +367,15 @@ class MOSBSim3v3(CircuitElem):
         Isbs                = self.Isbs
         Isbd                = self.Isbd
 
-        Vbc = 0.9 * ( self.phi - pow(0.5*K1/K2, 2.) )
+        if K2<0.0:
+            Vbc = 0.9 * ( self.phi - pow(0.5*K1/K2, 2.) )
+            if Vbc > -3.0:
+                Vbc = -3.0
+            elif Vbc < -30.0:
+                Vbc = -30.0
+        else:
+            Vbc = -30.0
+        if Vbc > self.VBM: Vbc = self.VBM
 
         # effective Vbs
         t0 = VBS - Vbc - 0.001

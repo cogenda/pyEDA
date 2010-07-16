@@ -28,7 +28,7 @@ Currently supported operations are
 
 @author: hash
 '''
-__all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'sqrt', 'aux1', 'aux2']
+__all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'sqrt', 'pow', 'aux1', 'aux2']
 
 import sys
 import math
@@ -261,15 +261,20 @@ class ADVar(object):
         
         r = ADVar()
         if not isinstance(other, ADVar):
-            other = float(other)
-            r.val = pow(self.val, other)
-            tmp = other * pow(self.val, other-1.0) 
+            rother = float(other)
+            r.val = pow(self.val, rother)
+            tmp = rother * pow(self.val, rother-1.0) 
             for i,dx in self.deriv:
                 r.deriv.append((i,tmp*dx))
             return r
+        else:
+            rother = float(other)
+            r.val = pow(self.val, rother)
+            tmp1 = rother * pow(self.val, rother-1.0) 
+            tmp2 = math.log(self.val) * r.val
+            r.deriv = _calcDeriv(self, other, lambda x,y,dx,dy : tmp1*dx + tmp2*dy)
+            return r
         
-        return NotImplemented
-    
     def __abs__(self):
         r = ADVar()
         r.val = abs(self.val)
@@ -373,6 +378,24 @@ def sqrt(x):
     r.val = t0
     for i,dx in x.deriv:
         r.deriv.append( (i, t1*dx) )
+    return r
+
+
+def pow(x, p):
+    ''' x to the p-th power'''
+    if isinstance(x, ADVar):
+        return x.__pow__(p)
+    elif not isinstance(p, ADVar):
+        return x.__pow__(p)
+
+    print '44444'
+    # x is scalar, p is ADVar
+    r = ADVar()
+    r.val = pow(x, float(p))
+
+    tmp = math.log(x) * r.val
+    for i,dx in p.deriv:
+        r.deriv.append((i,tmp*dx))
     return r
  
 
@@ -518,3 +541,6 @@ if __name__ == '__main__':
     print (a+c)
     print (1+c)
     print sqrt(c)
+    print pow(b,3.0)
+    print pow(b,c)
+    print pow(2.0,c)
