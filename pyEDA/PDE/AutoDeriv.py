@@ -28,7 +28,7 @@ Currently supported operations are
 
 @author: hash
 '''
-__all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'sqrt', 'pow', 'aux1', 'aux2']
+__all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'sqrt', 'Pow', 'aux1', 'aux2']
 
 import sys
 import math
@@ -389,14 +389,14 @@ def sqrt(x):
     return r
 
 
-def pow(x, p):
+def Pow(x, p):
     ''' x to the p-th power'''
     if isinstance(x, ADVar):
         return x.__pow__(p)
-    elif not isinstance(p, ADVar):
+
+    if not isinstance(p, ADVar):
         return x.__pow__(p)
 
-    print '44444'
     # x is scalar, p is ADVar
     r = ADVar()
     r.val = pow(x, float(p))

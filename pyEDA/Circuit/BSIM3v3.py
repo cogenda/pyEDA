@@ -92,11 +92,11 @@ class MOSBSim3v3(CircuitElem):
         "VOFFCV":  0.0,         # C-V lateral shift parameter
         "LINT":  0.0,           # Length reduction parameter (m)
         "LL":  0.0,             # Length reduction parameter
-        "LLC":  0.0,            # Length reduction parameter for CV
-        "LLN":  0.0,            # Length reduction parameter
+        "LLC":  None,           # Length reduction parameter for CV
+        "LLN":  1.0,            # Length reduction parameter
         "LW":  0.0,             # Length reduction parameter
-        "LWC":  0.0,            # Length reduction parameter for CV
-        "LWN":  0.0,            # Length reduction parameter
+        "LWC":  None,           # Length reduction parameter for CV
+        "LWN":  1.0,            # Length reduction parameter
         "LWL":  0.0,            # Length reduction parameter
         "LWLC":  0.0,           # Length reduction parameter for CV
         "WR":  1.0,             # Width dependence of rds (-)
@@ -104,13 +104,13 @@ class MOSBSim3v3(CircuitElem):
         "DWG":  0.0,            # Width reduction gate bias dependence (m/V)
         "DWB":  0.0,            # Width reduction body bias dependence (m/V)
         "WL":  0.0,             # Width reduction parameter
-        "WLC":  0.0,            # Width reduction parameter for CV
-        "WLN":  0.0,            # Width reduction parameter
+        "WLC":  None,           # Width reduction parameter for CV
+        "WLN":  1.0,            # Width reduction parameter
         "WW":  0.0,             # Width reduction parameter
-        "WWC":  0.0,            # Width reduction parameter for CV
-        "WWN":  0.0,            # Width reduction parameter
+        "WWC":  None,           # Width reduction parameter for CV
+        "WWN":  1.0,            # Width reduction parameter
         "WWL":  0.0,            # Width reduction parameter
-        "WWLC":  0.0,           # Width reduction parameter for CV
+        "WWLC": None,           # Width reduction parameter for CV
         "B0":  0.0,             # Abulk narrow width parameter
         "B1":  0.0,             # Abulk narrow width parameter
         "CLC":  0.0,            # Vdsat paramater for C-V model
@@ -178,6 +178,12 @@ class MOSBSim3v3(CircuitElem):
         self.TNOM += 273.15
         self.TEMP += 273.15
 
+        # cap dW/dL params copied from DC params
+        for k in ['LL', 'LW', 'LWL', 'WL', 'WW', 'WWL']:
+            kk = k+'C'
+            if not kwArgs.has_key(kk):
+                self.__dict__[kk] = self.__dict__[k]
+
         fac_scaling    = sqrt(epsSi/epsOx * self.TOX)
         Vtm0           = kboq * self.TNOM              # nominal thermal voltage
         Vtm            = kboq * self.TEMP              # thermal voltage
@@ -192,15 +198,15 @@ class MOSBSim3v3(CircuitElem):
 
         # effective length and width
         # see BSIM3v3 manual app-B-1.9
-        t0 = pow(self.L, self.LLN)
-        t1 = pow(self.W, self.LWN)
+        t0 = Pow(self.L, self.LLN)
+        t1 = Pow(self.W, self.LWN)
         tmp1 = self.LL / t0 + self.LW / t1 + self.LWL / (t0 * t1)
         dL = self.LINT + tmp1
         tmp2 = self.LLC / t0 + self.LWC / t1 + self.LWLC / (t0 * t1)
         #dLc = self.DLC + tmp2
 
-        t2 = pow(self.L, self.WLN)
-        t3 = pow(self.W, self.WWN)
+        t2 = Pow(self.L, self.WLN)
+        t3 = Pow(self.W, self.WWN)
         dW = self.WINT + self.WL / t2 + self.WW / t3 + self.WWL / (t2 * t3)
         tmp4 = self.WLC / t2 + self.WWC / t3 + self.WWLC / (t2 * t3)
         #dWc = self.DWC + tmp4
@@ -224,13 +230,16 @@ class MOSBSim3v3(CircuitElem):
         for k in self.LWP_Deps:
             if kwArgs.has_key('L'+k):
                 ldep = kwArgs['L'+k]
-                self.__dict__[k] += ldep*invLeff
+                if not ldep==0.0:
+                    self.__dict__[k] += ldep*invLeff
             if kwArgs.has_key('W'+k):
                 wdep = kwArgs['W'+k]
-                self.__dict__[k] += wdep*invWeff
+                if not wdep==0.0:
+                    self.__dict__[k] += wdep*invWeff0
             if kwArgs.has_key('P'+k):
                 pdep = kwArgs['P'+k]
-                self.__dict__[k] += pdep*invLWeff0
+                if not pdep==0.0:
+                    self.__dict__[k] += pdep*invLWeff0
 
         # }}}
 
@@ -261,7 +270,7 @@ class MOSBSim3v3(CircuitElem):
         # saturation velocity
         t4 = (self.TEMP/self.TNOM - 1.0)                # TempRatio
         VsatTemp = self.VSAT - self.AT * t4
-        Rds0 = (self.RDSW + self.PRT * t4) / pow(Weff0 * 1e6, self.WR)
+        Rds0 = (self.RDSW + self.PRT * t4) / Pow(Weff0 * 1e6, self.WR)
         ############################
 
         # gate capacitance
@@ -271,7 +280,7 @@ class MOSBSim3v3(CircuitElem):
         # electrostatics
         if not kwArgs.has_key('NCH') and kwArgs.has_key('GAMMA1'):
             # see BSIM3v3 manual app-A, notes NI-4
-            self.NCH = pow(self.GAMMA1 * Cox, 2.) / ( 2.*q0*epsSi )
+            self.NCH = Pow(self.GAMMA1 * Cox, 2.) / ( 2.*q0*epsSi )
 
         if self.NCH <= ni:
             self.NCH = float(ni)*10.
@@ -371,7 +380,7 @@ class MOSBSim3v3(CircuitElem):
         Isbd                = self.Isbd
 
         if K2<0.0:
-            Vbc = 0.9 * ( self.phi - pow(0.5*K1/K2, 2.) )
+            Vbc = 0.9 * ( self.phi - Pow(0.5*K1/K2, 2.) )
             if Vbc > -3.0:
                 Vbc = -3.0
             elif Vbc < -30.0:
@@ -440,6 +449,7 @@ class MOSBSim3v3(CircuitElem):
         Vth = self.VTH0 - self.K1*sqrtPhi + K1ox*sqrtPhis - K2ox * Vbseff \
               + dVth_lat + dVth_nrw \
               - dVth_L - dVth_W - dVth_DIBL + dVth_temp
+        #print '*****', float(Vth), dVth_nrw, self.W
         
         ######################
         # }}}
@@ -517,7 +527,7 @@ class MOSBSim3v3(CircuitElem):
         Ua = self.UA + self.UA1 * t0
         Ub = self.UB + self.UB1 * t0
         Uc = self.UC + self.UC1 * t0
-        U0 = self.U0 * pow(self.TEMP/self.TNOM, self.UTE)
+        U0 = self.U0 * Pow(self.TEMP/self.TNOM, self.UTE)
 
         t2 = Ua + Uc * Vbseff
         t3 = (Vgsteff + Vth + Vth) / self.TOX
