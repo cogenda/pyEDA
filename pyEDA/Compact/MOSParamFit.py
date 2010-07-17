@@ -13,7 +13,7 @@ from matplotlib import pyplot
 
 class MOS_IV_FitData(object):
     def __init__(self):
-        # curves is a list of (mosID, MOS_IV_Curve)
+        # curves is a list of (mosID, MOS_IV_Curve, weight_multiplier)
         self.curves = []
         self.subVth = False
         self.curr_th=1e-6
@@ -21,27 +21,28 @@ class MOS_IV_FitData(object):
 
     def __len__(self):
         cnt = 0
-        for mosID, curve in self.curves:
+        for mosID, curve, _ in self.curves:
             cnt = cnt + len(curve)
         return cnt
 
-    def addCurve(self, mosID, curve):
-        self.curves.append( (mosID,curve) )
+    def addCurve(self, mosID, curve, wMult=1.0):
+        self.curves.append( (mosID,curve, wMult) )
 
     def iterData(self):
-        for mosID, curve in self.curves:
+        for mosID, curve, wMult in self.curves:
             IOut = curve.IOut
             for vbias, curr in curve.iterData():
                 weight = 1.0
                 if self.subVth:
                     weight = (self.curr_th+abs(curr))/max(abs(curr), self.curr_min)
+                weight *= wMult
                 yield (mosID, IOut, vbias, curr, weight)
 
     def plotData(self, plt, modelCalc=None):
         '''
         @param modelCalc  a function fn(mosID, IOut, vbias) to calculate mos current
         '''
-        for mosID, curve in self.curves:
+        for mosID, curve, _ in self.curves:
             dataVScan = curve.dataVScan()
             dataCurr  = curve.dataCurr()
             dataModel = np.zeros(np.shape(dataCurr))
@@ -123,20 +124,27 @@ class MOS_IV_Fit(object):
         self.mos = {}  # map of mosID:CachedMOS
         self.dataSrc = MOS_IV_FitData()
 
-    def addDataSource(self, mosID, curve):
+    def addDataSource(self, mosID, curve, weight=1.0):
         '''
         @param mosID    (W,L,T) tuple
         '''
-        MOS_param = self.baseParam.copy()
-        if mosID[0]<1e-3:
-            MOS_param['W'] = mosID[0] * 1e-6
-        if mosID[1]<1e-3:
-            MOS_param['L'] = mosID[1] * 1e-6
-        #MOS_param['T'] = mosID[2] + 273.15
+        MOS_param={}
+        for k,v in self.baseParam.iteritems():
+            if isinstance(v, tuple):
+                MOS_param[k] = v[0]
+            else:
+                MOS_param[k] = v
+
+        W,L,TEMP = [float(x) for x in mosID]
+        if W>1e-3:  W*=1e-6
+        if L>1e-3:  L*=1e-6
+        MOS_param['W'] = W
+        MOS_param['L'] = L
+        MOS_param['TEMP'] = TEMP
 
         if not self.mos.has_key(mosID):
-            self.mos[mosID] = CachedMOS(MOS_param, self.fitParam.keys())
-        self.dataSrc.addCurve(mosID, curve)
+            self.mos[mosID] = CachedMOS(MOS_param, self.fitParam)
+        self.dataSrc.addCurve(mosID, curve, weight)
 
     def _modelCalc(self, mosID, IOut, param, vbias):
         mos = self.mos[mosID]
@@ -170,7 +178,12 @@ class MOS_IV_Fit(object):
         return res
 
     def doFit(self, plot=None):
-        guess = self.fitParam.values()
+        guess=[]
+        for k in self.fitParam:
+            v = self.baseParam[k]
+            if isinstance(v, tuple):
+                v=v[0]
+            guess.append(v)
 
         result, success = leastsq(self.fun, guess, (), self.jac, warning=True)
         if isinstance(result, np.float):
@@ -181,7 +194,7 @@ class MOS_IV_Fit(object):
             self.visualize(result, plot)
 
         param = {}
-        for i,k in enumerate(self.fitParam.keys()):
+        for i,k in enumerate(self.fitParam):
             param[k] = result[i]
         return param, norm(e)
 
@@ -193,8 +206,9 @@ class MOS_IV_Fit(object):
 
 
 class MOS_FitProject(object):
-    def __init__(self):
+    def __init__(self, param0):
         self.datasets = {}
+        self.param = param0
 
     def loadBSimProFile(self, name, fname):
         ins = BSP_MOSFET_Instance()
@@ -212,29 +226,37 @@ class MOS_FitProject(object):
         i=0
         s=''
         for k,v in param.iteritems():
+            if isinstance(v, tuple):
+                v = v[0]
             s += '%8s: %12G' % (k,v)
             i+=1
             if i%4==0:
               s += '\n'
         return s
 
-    def run(self, param0):
+    def run(self):
         i = 0
-        param = param0
 
         for i in xrange(100):
             nameStep = 'step%d' % i
             if hasattr(self, nameStep):
                 fnStep = self.__getattribute__(nameStep)
                 print '========== Step %d ===========' % i
-                print 'known params:\n%s' % self.paramToStr(param)
+                #print 'known params:\n%s' % self.paramToStr(self.param)
 
-                param, result, err = fnStep(param)
+                result, err = fnStep()
 
                 print 'fit error: %g\nfit result:\n%s' % (err, self.paramToStr(result))
-                print 'accept params:\n%s' % self.paramToStr(param)
+                #print 'accept params:\n%s' % self.paramToStr(self.param)
                 print '\n'
 
-
+    def acceptParam(self, fitResult, keys):
+        for k in keys:
+            old = self.param[k]
+            if isinstance(old, tuple):
+                new = (fitResult[k], old[1], old[2])
+            else:
+                new = fitResult[k]
+            self.param[k] = new
 
 
