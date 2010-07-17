@@ -449,7 +449,6 @@ class MOSBSim3v3(CircuitElem):
         Vth = self.VTH0 - self.K1*sqrtPhi + K1ox*sqrtPhis - K2ox * Vbseff \
               + dVth_lat + dVth_nrw \
               - dVth_L - dVth_W - dVth_DIBL + dVth_temp
-        #print '*****', float(Vth), dVth_nrw, self.W
         
         ######################
         # }}}
@@ -572,14 +571,20 @@ class MOSBSim3v3(CircuitElem):
         Vasat = t1/t2
 
         # VA_CLM
-        VaCLM = (Abulk*Esat*Leff + Vgsteff) / ( self.PCLM*Abulk*Esat*litl ) * diffVds
+        if self.PCLM>0.0 and diffVds>1.0e-10:
+            VaCLM = (Abulk*Esat*Leff + Vgsteff) / ( self.PCLM*Abulk*Esat*litl ) * diffVds
+        else:
+            VaCLM = 1e8
 
         # VA_DIBLC
-        t0 = exp(-0.5*self.DROUT*Leff/Lt0)
-        thetaRout = self.PDIBLC1 * ( t0 + 2.*t0*t0 ) + self.PDIBLC2
+        if self.DROUT>0.0:
+            t0 = exp(-0.5*self.DROUT*Leff/Lt0)
+            thetaRout = self.PDIBLC1 * ( t0 + 2.*t0*t0 ) + self.PDIBLC2
 
-        t1 = Abulk*Vdsat
-        VaDIBLC = Vgst2Vtm/(thetaRout * (1.+self.PDIBLCB*Vbseff)) * (1.-t1/(t1+Vgst2Vtm))
+            t1 = Abulk*Vdsat
+            VaDIBLC = Vgst2Vtm/(thetaRout * (1.+self.PDIBLCB*Vbseff)) * (1.-t1/(t1+Vgst2Vtm))
+        else:
+            VaDIBLC = 1e8
 
         # VA
         t0 = self.PVAG * Vgsteff / (Esat*Leff)
@@ -587,10 +592,13 @@ class MOSBSim3v3(CircuitElem):
             t0 = 1. + t0
         else:
             t0 = (0.8+t0) * (1. / (17. + 20.*t0) )
-        Va = Vasat + t0 / (1./VaCLM + 1./VaDIBLC)
+        Va = Vasat + t0 * (VaCLM*VaDIBLC)/(VaCLM + VaDIBLC)
 
         # one over VaSCBE
-        rcpVaSCBE = self.PSCBE2/Leff * exp(-self.PSCBE1*litl/diffVds)
+        if 100.*diffVds > self.PSCBE1*litl:
+            rcpVaSCBE = self.PSCBE2/Leff * exp(-self.PSCBE1*litl/diffVds)
+        else:
+            rcpVaSCBE = 0.0
 
         # Calculation of Ids
         CoxWovL = Cox * Weff / Leff
@@ -606,7 +614,11 @@ class MOSBSim3v3(CircuitElem):
         Ids = Idsa * (1.0 + diffVds * rcpVaSCBE)
 
         # Substrate current
-        Isub = (self.ALPHA0 + self.ALPHA1*Leff)/Leff * diffVds * exp(-self.BETA0/diffVds) * Idsa
+        if diffVds>1e-5:
+            t0 = exp(-self.BETA0/diffVds)
+        else:
+            t0 = 0.0
+        Isub = (self.ALPHA0 + self.ALPHA1*Leff)/Leff * diffVds * t0 * Idsa
 
         # diode current
         NVtm = self.NJ * Vtm
@@ -707,11 +719,11 @@ if __name__=='__main__':
                 Id, Is, Isub = mos._DC_Curr(Vgs,Vds,Vbs)
                 print "%15g %15g %15g %15g %15g" % (Vgs, Vds, Vbs, Id, Isub)
 
-#    for j in xrange(1,37):
+#    for j in xrange(37):
 #        Vbs = 0.
 #        Vds = j*0.05
 #        Vgs = 1.8
-#        Ids = mos._Ids(Vgs,Vds,Vbs)
-#        print Vgs, Vds, Vbs, Ids
+#        Id, Is, Isub = mos._DC_Curr(Vgs,Vds,Vbs)
+#        print Vgs, Vds, Vbs, Id
 
 #-1.20150e-09
