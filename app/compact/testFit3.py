@@ -390,7 +390,69 @@ class MOSFit3(MOS_FitProject):
         dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':0.1}, 'Id'))
         self.IdVg_SN_lin_b0 = dsrc
 
+        # ---
+        # Idvg, long/wide, saturation region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x15.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':3.3}, 'Id'))
+        self.IdVg_LW_sat_b0 = dsrc
 
+        # Idvg, mid/wide, saturation region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x1p8.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':3.3}, 'Id'))
+        self.IdVg_MW_sat_b0 = dsrc
+
+        # Idvg, short/wide, saturation region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x0p6.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':3.3}, 'Id'))
+        self.IdVg_SW_sat_b0 = dsrc
+
+        # Idvg, long/narrow, saturation region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n1p8x15.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':3.3}, 'Id'))
+        self.IdVg_LN_sat_b0 = dsrc
+
+        # Idvg, short/narrow, saturation region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n1p8x0p6.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':3.3}, 'Id'))
+        self.IdVg_SN_sat_b0 = dsrc
+
+        # ---
+        # Idvg, long/wide, Vd=1 region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x15.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':1.0}, 'Id'))
+        self.IdVg_LW_d1_b0 = dsrc
+
+        # Idvg, mid/wide, Vd=1 region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x1p8.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':1.0}, 'Id'))
+        self.IdVg_MW_d1_b0 = dsrc
+
+        # Idvg, short/wide, Vd=1 region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x0p6.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':1.0}, 'Id'))
+        self.IdVg_SW_d1_b0 = dsrc
+
+        # Idvg, long/narrow, Vd=1 region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n1p8x15.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':1.0}, 'Id'))
+        self.IdVg_LN_d1_b0 = dsrc
+
+        # Idvg, short/narrow, saturation region, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n1p8x0p6.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,    'Vds':1.0}, 'Id'))
+        self.IdVg_SN_d1_b0 = dsrc
+
+        # ---
         # IdVg, long/wide, linear region, all Vb
         dsrc = MOS_IV_FitData()
         ds = self.datasets['n15x15.gtr']
@@ -436,6 +498,35 @@ class MOSFit3(MOS_FitProject):
         dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-3.3,   'Vds':0.1}, 'Id'))
         self.IdVg_SN_lin_ba = dsrc
 
+        #---
+        # IdVg, long/wide , Vd=1, all Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x15.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,     'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-1.1,   'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-2.2,   'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-3.3,   'Vds':1.0}, 'Id'))
+        self.IdVg_LW_d1_ba = dsrc
+
+        # IdVg, mid/wide, Vd=1, all Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x1p8.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,     'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-1.1,   'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-2.2,   'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-3.3,   'Vds':1.0}, 'Id'))
+        self.IdVg_MW_d1_ba = dsrc
+
+        # IdVg, short/wide, Vd=1, all Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n15x0p6.gtr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':0.,     'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-1.1,   'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-2.2,   'Vds':1.0}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vgs', {'Vbs':-3.3,   'Vds':1.0}, 'Id'))
+        self.IdVg_SW_d1_ba = dsrc
+
+        #---
         # IdVg, long/wide , saturation region, all Vb
         dsrc = MOS_IV_FitData()
         ds = self.datasets['n15x15.gtr']
@@ -494,10 +585,20 @@ class MOSFit3(MOS_FitProject):
         dsrc.addCurve(ds.mosID(), ds.getCurve('Vds', {'Vbs':0.,     'Vgs':3.3}, 'Id'))
         self.IdVd_SW_b0 = dsrc
 
+        # IdVd, long/narrow, zero Vb
+        dsrc = MOS_IV_FitData()
+        ds = self.datasets['n1p8x15.drr']
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vds', {'Vbs':0.,     'Vgs':0.9}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vds', {'Vbs':0.,     'Vgs':1.5}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vds', {'Vbs':0.,     'Vgs':2.1}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vds', {'Vbs':0.,     'Vgs':2.7}, 'Id'))
+        dsrc.addCurve(ds.mosID(), ds.getCurve('Vds', {'Vbs':0.,     'Vgs':3.3}, 'Id'))
+        self.IdVd_LN_b0 = dsrc
+
     def step10(self):
         targets=['VTH0', 'U0', 'UA', 'UB']
         fit = MOS_IV_Fit(self.param, targets, 'Step 1')
-        fit.setDataSource(self.IdVg_LW_lin_b0)
+        fit.setDataSource(1.0*self.IdVg_LW_lin_b0)
 
         result,err = fit.doFit(plot=pyplot)
         self.acceptParam(result, targets)
@@ -508,7 +609,7 @@ class MOSFit3(MOS_FitProject):
     def step20(self):
         targets=['K1', 'K2', 'UC']
         fit = MOS_IV_Fit(self.param, targets, 'Step 2')
-        fit.setDataSource(self.IdVg_LW_lin_ba)
+        fit.setDataSource(1.0*self.IdVg_LW_lin_ba)
 
         result,err = fit.doFit(plot=pyplot)
         self.acceptParam(result, targets)
@@ -519,9 +620,19 @@ class MOSFit3(MOS_FitProject):
     def step30(self):
         targets = ['NFACTOR', 'VOFF']
         fit = MOS_IV_Fit(self.param, targets, 'Step 3')
-        fit.setDataSource(self.IdVg_LW_lin_ba)
+        fit.setDataSource(1.0*self.IdVg_LW_lin_ba)
 
-        #fit.dataSrc.subVth=True
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+
+        return result, err
+
+    def step35(self):
+        targets = ['NFACTOR', 'VOFF']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 3-a')
+        fit.setDataSource(1.0*self.IdVg_LW_lin_b0)
+
+        fit.dataSrc.subVth=True
         result,err = fit.doFit(plot=pyplot)
         self.acceptParam(result, targets)
 
@@ -533,7 +644,6 @@ class MOSFit3(MOS_FitProject):
         fit = MOS_IV_Fit(self.param, targets, 'Step 4')
         fit.setDataSource(self.IdVg_LW_lin_b0 + 10.0 * self.IdVg_LN_lin_b0)
 
-        #fit.dataSrc.subVth=True
         result,err = fit.doFit(plot=pyplot)
         self.acceptParam(result, targets)
 
@@ -544,7 +654,6 @@ class MOSFit3(MOS_FitProject):
         fit = MOS_IV_Fit(self.param, targets, 'Step 5')
         fit.setDataSource(self.IdVg_LW_lin_ba + 15.0 * self.IdVg_LN_lin_ba)
 
-        #fit.dataSrc.subVth=True
         result,err = fit.doFit(plot=pyplot)
         self.acceptParam(result, targets)
 
@@ -630,6 +739,138 @@ class MOSFit3(MOS_FitProject):
         self.acceptParam(result, targets)
         return result, err
 
+    def step132(self):
+        targets = ['ETA0', 'ETAB']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 13-2')
+        fit.setDataSource(     self.IdVg_LW_sat_ba+ 
+                          0.1 *self.IdVg_MW_sat_ba+
+                          0.05*self.IdVg_SW_sat_ba+
+                               self.IdVg_LW_d1_ba+ 
+                          0.1 *self.IdVg_MW_d1_ba+
+                          0.05*self.IdVg_SW_d1_ba)
+
+
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+        return result, err
+
+    def step140(self):
+        targets = ['B0', 'B1']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 14')
+        fit.setDataSource(     self.IdVd_LW_b0+ 
+                          10. *self.IdVd_LN_b0)
+
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+        return result, err
+
+    def step150(self):
+        targets = ['ETA0', 'DSUB']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 15')
+        fit.setDataSource(     self.IdVd_LW_b0+ 
+                          0.1 *self.IdVd_MW_b0 +
+                          0.05*self.IdVd_SW_b0)
+
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+        return result, err
+
+    def step152(self):
+        targets = ['ETA0', 'DSUB', 'PCLM', 'PDIBLC1', 'PDIBLC2', 'DROUT']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 15-2')
+        fit.setDataSource(     self.IdVd_LW_b0+ 
+                          0.1 *self.IdVd_MW_b0 +
+                          0.05*self.IdVd_SW_b0)
+
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+        return result, err
+
+    def step160(self):
+        targets = ['ETA0', 'DSUB', 'PCLM', 'PDIBLC1', 'PDIBLC2', 'A1', 'A2']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 16')
+        fit.setDataSource(     self.IdVd_LW_b0+ 
+                          0.1 *self.IdVd_MW_b0 +
+                          0.05*self.IdVd_SW_b0)
+
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+        return result, err
+
+
+    def step170(self):
+        targets = ['A1']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 17')
+        fit.setDataSource(     self.IdVg_LW_sat_b0+ 
+                          0.1 *self.IdVg_MW_sat_b0+
+                          0.05*self.IdVg_SW_sat_b0+
+                               self.IdVg_LW_d1_b0+ 
+                          0.1 *self.IdVg_MW_d1_b0+
+                          0.05*self.IdVg_SW_d1_b0)
+
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+        return result, err
+
+    def step180(self):
+        targets = ['KETA', 'ETAB']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 18')
+        fit.setDataSource(     self.IdVg_LW_sat_ba+ 
+                          0.1 *self.IdVg_MW_sat_ba+
+                          0.05*self.IdVg_SW_sat_ba+
+                               self.IdVg_LW_d1_ba+ 
+                          0.1 *self.IdVg_MW_d1_ba+
+                          0.05*self.IdVg_SW_d1_ba)
+
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+        return result, err
+
+    def step190(self):
+        targets = ['KETA', 'LKETA']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 19')
+        fit.setDataSource(     self.IdVg_LW_sat_b0+ 
+                          0.1 *self.IdVg_MW_sat_b0+
+                          0.05*self.IdVg_SW_sat_b0+
+                               self.IdVg_LW_d1_b0+ 
+                          0.1 *self.IdVg_MW_d1_b0+
+                          0.05*self.IdVg_SW_d1_b0)
+
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+        return result, err
+
+    def step200(self):
+        targets = ['CDSCD']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 20')
+        fit.setDataSource(     self.IdVg_LW_sat_b0+ 
+                          0.1 *self.IdVg_MW_sat_b0+
+                          0.05*self.IdVg_SW_sat_b0+
+                               self.IdVg_LW_d1_b0+ 
+                          0.1 *self.IdVg_MW_d1_b0+
+                          0.05*self.IdVg_SW_d1_b0)
+
+        fit.dataSrc.subVth=True
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+
+        return result, err
+
+    def step205(self):
+        targets = ['CDSCB']
+        fit = MOS_IV_Fit(self.param, targets, 'Step 20-5')
+        fit.setDataSource(     self.IdVg_LW_sat_ba+ 
+                          0.1 *self.IdVg_MW_sat_ba+
+                          0.05*self.IdVg_SW_sat_ba+
+                               self.IdVg_LW_d1_ba+ 
+                          0.1 *self.IdVg_MW_d1_ba+
+                          0.05*self.IdVg_SW_d1_ba)
+
+        fit.dataSrc.subVth=True
+        result,err = fit.doFit(plot=pyplot)
+        self.acceptParam(result, targets)
+
+        return result, err
 
 
 
@@ -637,6 +878,6 @@ param0['TEMP']=25.
 param0['TNOM']=25.
 
 proj = MOSFit3(param0)
-proj.run(130)
+proj.run(0,199)
 pyplot.show()
 

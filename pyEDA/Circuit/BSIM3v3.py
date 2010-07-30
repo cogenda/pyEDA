@@ -18,10 +18,12 @@ def log1pexp(x):
     else:
         return x
 
+
 class MOSBSim3v3(CircuitElem):
     SymbolPrefix = 'M'
     Terminals = ['D', 'G', 'S', 'B']
 
+    # {{{
     Param_Defs = {
         "L":  1.0e-6,           # Length (m)
         "W":  1.0e-6,           # Width (m)
@@ -143,11 +145,12 @@ class MOSBSim3v3(CircuitElem):
         "BINUNIT": 1,
         "CALCACM": 1,
         }
+    # }}}
 
     LWP_Deps = [
          'CDSC',    'CDSCB',    'CDSCD',
          'CIT',     'NFACTOR',  'VSAT',
-         'A0',      'AGS',      'A1',       'A2'
+         'A0',      'AGS',      'A1',       'A2',
          'KETA',    'NGATE',    'K1',       'K2',
          'VTH0',
          'UA',      'UB',       'UC',       'U0',
@@ -163,6 +166,23 @@ class MOSBSim3v3(CircuitElem):
          'CGSL',    'CGDL',
          'CKAPPA',  'CF',       'CLC',     'CLE',
          'VOFFCV',  'NOFF',     'ACDE',    'MOIN']
+
+    def checkParamFix(self, var, check, fix):
+        '''
+        @param var      string, name of the param
+        @param check    function that checks var
+        @param fix      new value for the var if check fails
+        '''
+
+        v = self.__dict__[var]
+        if check(v):
+            return True
+        else:
+            if isinstance(v, ADVar):
+                v.val = fix
+            else:
+                self.__dict__[var] = fix
+            return False
 
     def __init__(self, **kwargs):
         kwArgs={}
@@ -297,6 +317,9 @@ class MOSBSim3v3(CircuitElem):
 
         Vbi     = Vtm0 * log(1.0e20 * self.NCH / (ni * ni))             # built-in potential
 
+        t0 = exp(-0.5*self.DROUT*Leff/Lt0)
+        thetaRout = self.PDIBLC1 * ( t0 + 2.*t0*t0 ) + self.PDIBLC2
+
         # see BSIM3v3 manual app-A, notes NI-7
         if not kwArgs.has_key('VBX'):
             self.VBX = phi - (q0 * self.NCH * self.XT * self.XT) / (2.*epsSi)
@@ -349,12 +372,20 @@ class MOSBSim3v3(CircuitElem):
         self.K2             = K2
         self.Xdep0          = Xdep0
         self.Lt0            = Lt0
+        self.thetaRout      = thetaRout
         self.VsatTemp       = VsatTemp
         self.Rds0           = Rds0
         self.litl           = litl
         self.Cdep0          = Cdep0
         self.Isbs           = Isbs
         self.Isbd           = Isbd
+
+
+        self.checkParamFix('DROUT', lambda x: x>=0., 0.0)
+        self.checkParamFix('DVT1',  lambda x: x>=0., 0.0)
+        self.checkParamFix('DVT1W', lambda x: x>=0., 0.0)
+        self.checkParamFix('PDIBLC1',   lambda x: x>=0., 0.0)
+        self.checkParamFix('PDIBLC2',   lambda x: x>=0., 0.0)
 
     def _DC_Curr(self, VGS, VDS, VBS):
         Leff                = self.Leff
@@ -374,6 +405,7 @@ class MOSBSim3v3(CircuitElem):
         Xdep0               = self.Xdep0
         VsatTemp            = self.VsatTemp
         Lt0                 = self.Lt0
+        thetaRout           = self.thetaRout
         litl                = self.litl
         Cdep0               = self.Cdep0
         Isbs                = self.Isbs
@@ -577,10 +609,7 @@ class MOSBSim3v3(CircuitElem):
             VaCLM = 1e8
 
         # VA_DIBLC
-        if self.DROUT>0.0:
-            t0 = exp(-0.5*self.DROUT*Leff/Lt0)
-            thetaRout = self.PDIBLC1 * ( t0 + 2.*t0*t0 ) + self.PDIBLC2
-
+        if thetaRout>0.0:
             t1 = Abulk*Vdsat
             VaDIBLC = Vgst2Vtm/(thetaRout * (1.+self.PDIBLCB*Vbseff)) * (1.-t1/(t1+Vgst2Vtm))
         else:
@@ -594,8 +623,10 @@ class MOSBSim3v3(CircuitElem):
             t0 = (0.8+t0) * (1. / (17. + 20.*t0) )
         Va = Vasat + t0 * (VaCLM*VaDIBLC)/(VaCLM + VaDIBLC)
 
+
         # one over VaSCBE
-        if 100.*diffVds > self.PSCBE1*litl:
+        #if 100.*diffVds > self.PSCBE1*litl:
+        if diffVds > 1e-10:
             rcpVaSCBE = self.PSCBE2/Leff * exp(-self.PSCBE1*litl/diffVds)
         else:
             rcpVaSCBE = 0.0

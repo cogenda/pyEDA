@@ -235,7 +235,7 @@ class MOS_IV_Fit(object):
 
         #result, success = leastsq(self.fun, guess, (), self.jac, warning=True, factor=1., diag=scale)
         result, cov_x, infodict, mesg, success = leastsq(self.fun, guess, (), self.jac, warning=True, factor=1., full_output=1)
-        print '*****', success, mesg
+        print '*****', success, infodict['nfev'], mesg
         if isinstance(result, np.float):
             result = [result]
         e = self.fun(result)
@@ -290,7 +290,7 @@ class MOS_FitProject(object):
         return s
 
     def run(self, start=0, stop=1000):
-        savefn = lambda x : '%s.save.%d' % (self.name, x)
+        savefn = lambda x : 'output/%s.save.%d' % (self.name, x)
       
         if start>0:
             for i in xrange(start):
@@ -320,7 +320,7 @@ class MOS_FitProject(object):
                 fsave.close()
 
         
-        #print 'final params:\n%s' % self.paramToStr(self.param)
+        print 'final params:\n%s' % self.paramToStr(self.param)
 
     def acceptParam(self, fitResult, keys):
         for k in keys:
