@@ -1,0 +1,22 @@
+pyEDA EDA Framework 
+Copyright (c) 2010 Cogenda Pte Ltd, Singapore
+This software is distributed under the GPLv3 (GNU General Public License version 3) license.
+
+This is a python framework for several EDA (Electronic Design Automation) applications.
+Currently, it supports the following applications:
+
+ * 1D Semiconductor Device Simulation (TCAD)
+ * Circuit Simulation (SPICE-like)
+ * Compact Device Model Extraction
+
+The following infrastructures are provided in this package to support the above (and potentially other) applications:
+ * Automatic Differentiation
+ * Non-linear Equation Solver
+ * Differentiation of Implicitly-Defined Functions
+ * Finite-Volume Discretization of PDEs
+ * Parsing of some EDA data formats
+
+This software package was designed as the teaching tool for a computational electronics course at senior/graduate level.
+Due to its educational purposes, clarity is emphasized over efficiency.
+Nevertheless, it is found useful in some pratical projects as well.
+
