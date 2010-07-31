@@ -9,6 +9,7 @@ from pyEDA.Compact.AuroraData import *
 import numpy as np
 from scipy.linalg import norm
 from scipy.optimize import leastsq
+from openopt import NLLSP
 from matplotlib import pyplot
 import pickle
 import os
@@ -162,6 +163,7 @@ class MOS_IV_Fit(object):
         self.mos = {}  # map of mosID:CachedMOS
         self.dataSrc = MOS_IV_FitData()
         self.name = name
+        self.solver='nlp:scipy_tnc'
 
     def setDataSource(self, src):
         '''
@@ -222,20 +224,32 @@ class MOS_IV_Fit(object):
     def doFit(self, plot=None):
         guess=[]
         scale=[] # scaling factor of variables
+        ub=[] # upper bound
+        lb=[] # lower bound
         for k in self.fitParam:
             v = self.baseParam[k]
             if isinstance(v, tuple):
-                invS = min(1e5, max(abs(v[1]), abs(v[2])))
+                vmin = v[1]
+                vmax = v[2]
+                invS = abs(vmax-vmin)
                 v=v[0]
             else:
+                vmin = -1e100
+                vmax = 1e100
                 invS = min(1e5, max(1e-6, abs(float(v))))
 
             guess.append(v)
+            lb.append(vmin)
+            ub.append(vmax)
             scale.append(1./invS)
 
         #result, success = leastsq(self.fun, guess, (), self.jac, warning=True, factor=1., diag=scale)
-        result, cov_x, infodict, mesg, success = leastsq(self.fun, guess, (), self.jac, warning=True, factor=1., full_output=1)
-        print '*****', success, infodict['nfev'], mesg
+        #result, cov_x, infodict, mesg, success = leastsq(self.fun, guess, (), self.jac, warning=True, factor=1., full_output=1)
+        #print '*****', success, infodict['nfev'], mesg
+
+        LSP = NLLSP(self.fun, guess, df = self.jac, ub=ub, lb=lb, scale=scale, xtol = 1e-12, ftol = 1e-12, gtol=1e-12, maxFunEvals = 100)
+        r = LSP.solve(self.solver)
+        result = r.xf
         if isinstance(result, np.float):
             result = [result]
         e = self.fun(result)
