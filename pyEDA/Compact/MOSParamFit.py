@@ -13,14 +13,21 @@ from openopt import NLLSP
 from matplotlib import pyplot
 import pickle
 import os
+import string
+
+def _validFileName(str):
+    valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+    return ''.join(c for c in str if c in valid_chars).replace(' ','-')
+
 
 class MOS_IV_FitData(object):
-    def __init__(self):
+    def __init__(self, name=''):
         # curves is a list of (mosID, MOS_IV_Curve, weight_multiplier)
         self.curves = []
         self.subVth = False
         self.curr_th=1e-6
         self.curr_min=1e-12
+        self.name = name
 
     def __len__(self):
         cnt = 0
@@ -52,16 +59,17 @@ class MOS_IV_FitData(object):
                 weight *= wMult
                 yield (mosID, IOut, vbias, curr, weight)
 
-    def __add__(self, other):
+    def copy(self):
         res = MOS_IV_FitData()
-
         res.curves.extend(self.curves)
-        res.curves.extend(other.curves)
-        
-        res.subVth   = self.subVth or other.subVth
-        res.curr_th  = min(self.curr_th, other.curr_th)
-        res.curr_min = max(self.curr_min, other.curr_min)
+        res.subVth   = self.subVth
+        res.curr_th  = self.curr_th
+        res.curr_min = self.curr_min
+        res.name     = self.name
         return res
+
+    def __add__(self, other):
+        return MOS_IV_FitData_Group() + self + other
 
     def __rmul__(self, other):
         ''' right-multiplied by a scalar'''
@@ -74,32 +82,97 @@ class MOS_IV_FitData(object):
         res.subVth   = self.subVth
         res.curr_th  = self.curr_th
         res.curr_min = self.curr_min
+        res.name     = self.name
         return res
 
-    def plotData(self, plt, modelCalc=None, name=''):
+    def plotData(self, modelCalc=None, title='', timeout=-1):
         '''
         @param modelCalc  a function fn(mosID, IOut, vbias) to calculate mos current
         '''
-        for mosID, curve, wMult in self.curves:
+        fig = pyplot.figure()
+        for mosID, curve, _ in self.curves:
             dataVScan = curve.dataVScan()
-            dataCurr  = curve.dataCurr()*wMult
+            dataCurr  = curve.dataCurr()
             dataModel = np.zeros(np.shape(dataCurr))
 
             if modelCalc:
                 for i,v in enumerate(dataVScan):
                     vbias = curve.makeVBias(v)
-                    dataModel[i] = modelCalc(mosID, curve.IOut, vbias)*wMult
+                    dataModel[i] = modelCalc(mosID, curve.IOut, vbias)
                 if self.subVth:
-                    plt.semilogy(dataVScan, dataCurr, '+', dataVScan, dataModel, '-')
-                    plt.ylim(ymin=0.1*self.curr_min)
+                    pyplot.semilogy(dataVScan, dataCurr, '+', dataVScan, dataModel, '-')
+                    pyplot.ylim(ymin=0.1*self.curr_min)
                 else:
-                    plt.plot(dataVScan, dataCurr, '+', dataVScan, dataModel, '-')
+                    pyplot.plot(dataVScan, dataCurr, '+', dataVScan, dataModel, '-')
             else:
                 if self.subVth:
-                    plt.semilogy(dataVScan, dataCurr, '+')
+                    pyplot.semilogy(dataVScan, dataCurr, '+')
                 else:
-                    plt.plot(dataVScan, dataCurr, '+')
-        plt.title(name)
+                    pyplot.plot(dataVScan, dataCurr, '+')
+
+            pyplot.xlabel(curve.VScan)
+            pyplot.ylabel(curve.IOut)
+
+        title = '%s : %s' % (title,self.name)
+        pyplot.title(title)
+        fig.show()
+        if timeout>0.0:
+            pyplot.waitforbuttonpress(timeout)
+        else:
+            fig.savefig('output/' + _validFileName(title+'.png'), dpi=300)
+            pyplot.close(fig)
+
+
+class MOS_IV_FitData_Group(object):
+    def __init__(self):
+        self.srcs = []
+
+    def __len__(self):
+        cnt = 0
+        for src in self.srcs:
+            cnt = cnt + len(src)
+        return cnt
+
+    def copy(self):
+        res = MOS_IV_FitData_Group()
+        for src in self.srcs:
+            res = res + src.copy()
+        return res
+
+    def mosIDList(self):
+        list = []
+        for src in self.srcs:
+            list.extend(src.mosIDList())
+        return list
+
+
+    def __add__(self, other):
+        res = MOS_IV_FitData_Group()
+        if isinstance(other, MOS_IV_FitData_Group):
+            res.srcs.extend(self.srcs)
+            res.srcs.extend(other.srcs)
+        elif isinstance(other, MOS_IV_FitData):
+            res.srcs.extend(self.srcs)
+            res.srcs.append(other)
+        
+        return res
+
+    def __rmul__(self, other):
+        ''' right-multiplied by a scalar'''
+        s = float(other)
+        res = MOS_IV_FitData_Group()
+        for src in self.srcs:
+            res.srcs.append(s*src)
+        return res
+
+    def iterData(self):
+        for src in self.srcs:
+            for t in src.iterData():
+                yield t
+
+    def plotData(self, modelCalc=None, name='', timeout=-1):
+        for src in self.srcs:
+            src.plotData(modelCalc, name, timeout)
 
 
 class CachedMOS(object):
@@ -221,7 +294,7 @@ class MOS_IV_Fit(object):
             i += 1
         return res
 
-    def doFit(self, plot=None):
+    def doFit(self):
         guess=[]
         scale=[] # scaling factor of variables
         ub=[] # upper bound
@@ -254,19 +327,18 @@ class MOS_IV_Fit(object):
             result = [result]
         e = self.fun(result)
 
-        if plot:
-            self.visualize(result, plot)
-
         param = {}
         for i,k in enumerate(self.fitParam):
             param[k] = result[i]
         return param, norm(e)
 
-    def visualize(self, param, plt=pyplot):
-        plt.figure()
-        self.dataSrc.plotData(plt, 
-                              lambda mosID, IOut, vbias: self._modelCalc(mosID, IOut, param, vbias),
-                              self.name
+    def visualize(self, param, timeout=-1):
+        paramVec = []
+        for k in self.fitParam:
+            paramVec.append(param[k])
+
+        self.dataSrc.plotData(lambda mosID, IOut, vbias: self._modelCalc(mosID, IOut, paramVec, vbias),
+                              self.name, timeout
                              )
 
 
