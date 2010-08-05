@@ -85,6 +85,9 @@ class MOS_IV_FitData(object):
         res.name     = self.name
         return res
 
+    def setSubVth(self, subVth):
+        self.subVth = subVth
+
     def plotData(self, modelCalc=None, title='', timeout=-1):
         '''
         @param modelCalc  a function fn(mosID, IOut, vbias) to calculate mos current
@@ -164,6 +167,10 @@ class MOS_IV_FitData_Group(object):
         for src in self.srcs:
             res.srcs.append(s*src)
         return res
+
+    def setSubVth(self, subVth):
+        for src in self.srcs:
+            src.setSubVth(subVth)
 
     def iterData(self):
         for src in self.srcs:

@@ -17,7 +17,7 @@ class MOSp35Proj(MOSp35Data):
         fit.setDataSource(self.IdVg_LW_lin_b0.copy())
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
 
         self.acceptParam(result, targets)
 
@@ -30,7 +30,7 @@ class MOSp35Proj(MOSp35Data):
         fit.setDataSource(self.IdVg_LW_lin_ba.copy())
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
 
         self.acceptParam(result, targets)
 
@@ -52,9 +52,9 @@ class MOSp35Proj(MOSp35Data):
         fit = MOS_IV_Fit(self.param, targets, 'Step 3-a')
         fit.setDataSource(self.IdVg_LW_lin_b0.copy())
 
-        fit.dataSrc.subVth=True
+        fit.dataSrc.setSubVth(True)
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
 
         return result, err
@@ -66,7 +66,7 @@ class MOSp35Proj(MOSp35Data):
         fit.setDataSource(self.IdVg_LW_lin_b0 + 10.0 * self.IdVg_LN_lin_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
 
         self.acceptParam(result, targets)
 
@@ -78,7 +78,7 @@ class MOSp35Proj(MOSp35Data):
         fit.setDataSource(self.IdVg_LW_lin_ba + 15.0 * self.IdVg_LN_lin_ba)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
 
         return result, err
@@ -89,7 +89,7 @@ class MOSp35Proj(MOSp35Data):
         fit.setDataSource(self.IdVg_LW_lin_ba + 0.1*self.IdVg_MW_lin_ba + 0.05*self.IdVg_SW_lin_ba)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
 
         return result, err
@@ -100,7 +100,7 @@ class MOSp35Proj(MOSp35Data):
         fit.setDataSource(self.IdVg_LW_lin_b0 + 0.1*self.IdVg_MW_lin_b0 + 0.05*self.IdVg_SW_lin_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
 
         return result, err
@@ -111,7 +111,7 @@ class MOSp35Proj(MOSp35Data):
         fit.setDataSource(self.IdVg_LW_lin_ba + 0.1*self.IdVg_MW_lin_ba + 0.05*self.IdVg_SW_lin_ba)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
 
         return result, err
@@ -126,7 +126,7 @@ class MOSp35Proj(MOSp35Data):
                           2.0*self.IdVg_SN_lin_ba)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -140,7 +140,7 @@ class MOSp35Proj(MOSp35Data):
                           2.0*self.IdVg_SN_lin_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -154,7 +154,7 @@ class MOSp35Proj(MOSp35Data):
                           2.0*self.IdVg_SN_lin_ba)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -166,7 +166,7 @@ class MOSp35Proj(MOSp35Data):
                           0.05*self.IdVd_SW_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -182,7 +182,7 @@ class MOSp35Proj(MOSp35Data):
 
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -193,7 +193,7 @@ class MOSp35Proj(MOSp35Data):
                           10. *self.IdVd_LN_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -205,7 +205,7 @@ class MOSp35Proj(MOSp35Data):
                           0.05*self.IdVd_SW_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -217,7 +217,7 @@ class MOSp35Proj(MOSp35Data):
                           0.05*self.IdVd_SW_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -229,7 +229,7 @@ class MOSp35Proj(MOSp35Data):
                           0.05*self.IdVd_SW_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -245,7 +245,7 @@ class MOSp35Proj(MOSp35Data):
                           0.05*self.IdVg_SW_d1_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -260,7 +260,7 @@ class MOSp35Proj(MOSp35Data):
                           0.05*self.IdVg_SW_d1_ba)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -275,7 +275,7 @@ class MOSp35Proj(MOSp35Data):
                           0.05*self.IdVg_SW_d1_b0)
 
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
         return result, err
 
@@ -289,9 +289,9 @@ class MOSp35Proj(MOSp35Data):
                           0.1 *self.IdVg_MW_d1_b0+
                           0.05*self.IdVg_SW_d1_b0)
 
-        fit.dataSrc.subVth=True
+        fit.dataSrc.setSubVth(True)
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
 
         return result, err
@@ -306,9 +306,9 @@ class MOSp35Proj(MOSp35Data):
                           0.1 *self.IdVg_MW_d1_ba+
                           0.05*self.IdVg_SW_d1_ba)
 
-        fit.dataSrc.subVth=True
+        fit.dataSrc.setSubVth(True)
         result,err = fit.doFit()
-        #fit.visualize(result, timeout=0.0)
+        fit.visualize(result, timeout=0.0)
         self.acceptParam(result, targets)
 
         return result, err
