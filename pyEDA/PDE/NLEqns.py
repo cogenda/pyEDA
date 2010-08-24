@@ -169,8 +169,9 @@ class NLEqnState(object):
         This will be used for time-derivative-calculation in the future.
         '''
         # update integration
-        dt = self.clock - self.ptime[0]
-        self.integ += 0.5*(self.px[0]+self.x)*dt
+        if len(self.ptime)>0:
+            dt = self.clock - self.ptime[0]
+            self.integ += 0.5*(self.px[0]+self.x)*dt
 
         # update saved solution
         self.ptime.insert(0, self.clock)

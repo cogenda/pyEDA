@@ -8,7 +8,7 @@ from pyEDA.PDE.AutoDeriv import *
 from pyEDA.PDE.NLEqns import *
 from pyEDA.Mesh.Mesh1D import *
 from pyEDA.FVMEqn.FVMEqn import *
-import PhysUnit as Unit
+import pyEDA.Device.PhysUnit as Unit
 
 import numpy as np
 import scipy
