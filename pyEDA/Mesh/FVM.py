@@ -85,8 +85,9 @@ class Region(object):
         return s
     
 class Boundary(object):
-    def __init__(self, name=None):
+    def __init__(self, region, name=None):
         self.name=name
+        self.region=region
         self.cells=[]
         
     def addCell(self, cell, area=1.0):
@@ -100,8 +101,10 @@ class Boundary(object):
         return s
         
 class Interface(object):
-    def __init__(self, name=None):
+    def __init__(self, region1, region2, name=None):
         self.name=name
+        self.region1 = region1
+        self.region2 = region2
         self.cellPairs=[]
         
     def addCellPair(self, c1, c2, area=1.0):

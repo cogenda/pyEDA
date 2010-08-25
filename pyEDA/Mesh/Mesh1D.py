@@ -157,16 +157,17 @@ class Mesh1D(object):
         for r in xrange(0, rgnCnt-1):
             rgn1 = self.regions[r]
             rgn2 = self.regions[r+1]
-            interface = FVM.Interface(rgn1.name+'|'+rgn2.name)
+            interface = FVM.Interface(rgn1, rgn2, rgn1.name+'|'+rgn2.name)
             c1 = rgn1.cells[len(rgn1.cells)-1]
             c2 = rgn2.cells[0]
             interface.addCellPair(c1, c2)
             self.interfaces.append(interface)
             
         for node,name in bnds:
-            boundary = FVM.Boundary(name)
             #boundary nodes can only belong one region, hence one cell
-            boundary.addCell(nodes[node].cells[0]) 
+            cell=nodes[node].cells[0]
+            boundary = FVM.Boundary(cell.region, name)
+            boundary.addCell(cell) 
             self.boundaries.append(boundary)
                 
     
@@ -184,6 +185,12 @@ class Mesh1D(object):
             if not rIdx<len(self.regions):
                 raise IndexError
             return self.regions[rIdx]
+
+    def setRegionMaterial(self, rName_or_rIdx, material):
+        '''
+        Short-hand method for setting the material of a region
+        '''
+        self.getRegion(rName_or_rIdx).material = material
     
     def getBoundary(self, bName_or_bIdx):
         '''

@@ -12,7 +12,7 @@ class RegionEqn(object):
     Region equation.
     '''
     def __init__(self):
-        pass
+        self.region=None
     
     def eqnPerCell(self):
         ''' Return the number of equations per cell in this region'''
@@ -37,7 +37,7 @@ class RegionEqn(object):
 class BoundaryEqn(object):
     ''' Boundary equation '''
     def __init__(self):
-        pass
+        self.region=None
 
     def cellEqn(self, state, cell):
         ''' Returns an ADVar of the evaluated equation associated with boundary cell.  '''
@@ -47,7 +47,8 @@ class BoundaryEqn(object):
 class InterfaceEqn(object):
     ''' Interface Equation '''
     def __init__(self):
-        pass
+        self.region1=None
+        self.region2=None
 
     def cellPairEqn(self, state, cell1, cell2):
         ''' Returns an ADVar of the evaluated equation associated with cell pair cell1, cell2 across the interface.  '''
@@ -98,6 +99,7 @@ class FVMEqns(NLEqns):
         for r,region in enumerate(self.device.regions):
             if region.name==regionName:
                 self.regionEqns[r]=eqn
+                eqn.region=region
                 return
         # region name not found...
         raise ValueError
@@ -122,6 +124,8 @@ class FVMEqns(NLEqns):
         for i,interface in enumerate(self.device.interfaces):
             if matchIFName(interface.name, r1Name, r2Name):
                 self.interfaceEqns[i]=eqn
+                eqn.region1=interface.region1
+                eqn.region2=interface.region2
                 return
         # region name not found...
         raise ValueError
@@ -139,6 +143,7 @@ class FVMEqns(NLEqns):
         for b,boundary in enumerate(self.device.boundaries):
             if boundary.name==bndName:
                 self.boundaryEqns[b]=eqn
+                eqn.region=boundary.region
                 return
         # boundary name not found
         raise ValueError
