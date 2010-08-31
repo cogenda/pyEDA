@@ -16,7 +16,9 @@ class PolarCoord(ImplDeriv):
         super(PolarCoord,self).__init__(2, 2)
 
     def initGuess(self):
-        self.state.setVec([2, -1, 1, -1])
+        super(PolarCoord, self).initGuess()
+        self.state.setVar(0, 2.)
+        self.state.setVar(1, -1.)
 
     def calcFunJac(self):
         super(PolarCoord,self).calcFunJac() # must first call parent's version of this method

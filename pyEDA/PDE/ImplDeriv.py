@@ -21,8 +21,8 @@ class ImplDeriv(NLEqns):
         self.sizeP = p
         self.iVars = None  # independent variables
         n = m + p
-        if n > 20:  # we only plan to handle small implicit problems
-            raise ValueError
+        #if n > 20:  # we only plan to handle small implicit problems
+        #    raise ValueError
         self.state = NLEqnState(n)
 
     def setIndepVars(self, vars):
@@ -51,6 +51,11 @@ class ImplDeriv(NLEqns):
                 res[i] += Jinv[i,j] * self.iVars[j]
             res[i].setVal(self.state.x[i])
         return res
+
+    def initGuess(self):
+        for i in xrange(self.sizeP):
+            p = self.sizeM + i
+            self.state.setVar(p, self.iVars[i].getVal())
 
     def calcFunJac(self):
         for i in xrange(self.sizeP):
