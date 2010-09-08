@@ -62,18 +62,18 @@ class NLEqnState(object):
         initialize data structure
         '''
         self.x = scipy.zeros(self.N)
-        self.b = scipy.zeros(self.N)
-        #self.J = sparse.lil_matrix((self.N, self.N))
-        self.J = sparse.dok_matrix((self.N, self.N))
+
         self.dx = None
         self.clock = 0
         self.ptime = []
         self.px = []
         self.integ = scipy.zeros(self.N)
+
+        self.clearFunJac()
         
     def size(self):
         '''Return the number of equations'''
-        return self.nn
+        return self.N
     
     def setSize(self, n):
         '''Change the number of equations'''
@@ -234,25 +234,20 @@ class NLEqnState(object):
         if not isinstance(advar, ADVar):
             raise TypeError
                 
+        deriv = advar.getDeriv()
         if op==OPADD:
             self.b[idx] += advar.getVal()
-        else:
-            self.b[idx] = advar.getVal()
-
-        deriv = advar.getDeriv()
-        for ix,dx in deriv:
-            if op==OPADD:
-                self.J[idx,ix] += dx
-            else:   
-                self.J[idx,ix] = dx
-
+            for ix,dx in deriv:
+                self.Jrows[idx].append((ix,dx))
+        else: #OPSET
+            raise Exception # not implemented
+            
     def resetEqn(self, idx):
         '''
         Clear the residue vector b and Jacobian matrix J at row idx.
         '''
         self.b[idx] = 0.0
-        for j in xrange(self.N):
-            self.J[idx,j] = 0.0
+        self.Jrows[idx] = []
         
     def connectVar(self, idx1, idx2, advar=None, op=OPADD):
         '''
@@ -265,21 +260,44 @@ class NLEqnState(object):
 
         This effectively force the two variables equal.
         '''
-        self.J[idx1,:] += self.J[idx2,:]
         self.b[idx1] += self.b[idx2] 
-        
-        for j in xrange(self.N):
-            self.J[idx2,j] = 0.0
-        self.J[idx2,idx1] = -1.0
-        self.J[idx2,idx2] = 1.0
         self.b[idx2] = 0.0
 
+        # add row idx2 to row idx1
+        self.Jrows[idx1].extend(self.Jrows[idx2])
+        # clear row idx2
+        self.Jrows[idx2] = []
+
+        # J[idx2, idx1]= 1
+        self.Jrows[idx2].append((idx1,1.0))
+
+        # J[idx2, idx2]=-1
+        self.Jrows[idx2].append((idx2,-1.0))
+ 
     def clearFunJac(self):
         '''
         Clear all entries in Jacobian and residue.
         '''
         self.b = scipy.zeros(self.N)
-        self.J = sparse.lil_matrix((self.N, self.N))
+        self.J = None # Jacobian Matrix not assembled
+        self.Jrows = []
+        for i in xrange(self.N):
+            self.Jrows.append([]) # list of (col, val)
+
+
+    def assembleJac(self):
+        '''
+        Assemble jacobian matrix. add duplicate items
+        '''
+        ii=[]
+        jj=[]
+        vv=[]
+        for i,row in enumerate(self.Jrows):
+            for j,v in row:
+                ii.append(i)
+                jj.append(j)
+                vv.append(v)
+        self.J=sparse.coo_matrix((vv,(ii,jj)), (self.N,self.N)).tocsr()
         
 class NLEqns(object):
     def __init__(self):
@@ -337,13 +355,15 @@ class NLEqns(object):
         for iter in xrange(0,maxiter):
             self.state.clearFunJac()
             self.calcFunJac()
+            self.state.assembleJac()
+
             flagConv, err = self.checkConv()
             if trace:
                 print iter, err
             if flagConv:
                 break
 
-            dx = np.negative(dsolve.spsolve(self.state.J.tocsr(), self.state.b))
+            dx = np.negative(dsolve.spsolve(self.state.J, self.state.b))
             self.state.dx = self.dampStep(dx)
 
             self.state.x = np.add(self.state.x, self.state.dx)
