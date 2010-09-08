@@ -63,7 +63,8 @@ class NLEqnState(object):
         '''
         self.x = scipy.zeros(self.N)
         self.b = scipy.zeros(self.N)
-        self.J = sparse.lil_matrix((self.N, self.N))
+        #self.J = sparse.lil_matrix((self.N, self.N))
+        self.J = sparse.dok_matrix((self.N, self.N))
         self.dx = None
         self.clock = 0
         self.ptime = []
@@ -234,10 +235,10 @@ class NLEqnState(object):
             raise TypeError
                 
         if op==OPADD:
-            self.b[idx] += advar.val
+            self.b[idx] += advar.getVal()
         else:
-            self.b[idx] = advar.val
-            
+            self.b[idx] = advar.getVal()
+
         deriv = advar.getDeriv()
         for ix,dx in deriv:
             if op==OPADD:

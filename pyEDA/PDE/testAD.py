@@ -4,7 +4,10 @@ Created on Jun 12, 2009
 @author: hash
 '''
 import unittest
-from AutoDeriv import *
+try:
+  from advar import *
+except Exception:
+  from AutoDeriv import *
 import math
 
 class Test(unittest.TestCase):
@@ -191,7 +194,15 @@ class Test(unittest.TestCase):
         e = log(a*b*c)
         f = log(a)+log(b)+log(c)
         self.assert_(e.derivApproxEq(f))
+ 
+    def testSqrt(self):
+        a = ADVar(4.0, 0)
+        b = ADVar(2.0, 0)
         
+        e = sqrt(a)
+        self.assertAlmostEqual(e, 2.0)
+        self.assertAlmostEqual(e.getDeriv(0), 0.25)
+
     def testAux1(self):
         x = ADVar(2.4, 0) - ADVar(-1.1, 1)
         
@@ -199,7 +210,7 @@ class Test(unittest.TestCase):
         a2 = aux1(x)
         self.assertAlmostEqual(a1, float(a2))
         
-        self.assertEqual(aux1(ADVar(0,0)).val,1.0)
+        self.assertEqual(aux1(ADVar(0,0)).getVal(),1.0)
         self.assertEqual(aux1(ADVar(0,0)).getDeriv(0),0)
         
     def testAux2(self):
@@ -209,7 +220,7 @@ class Test(unittest.TestCase):
 
         self.assertAlmostEqual(a1, float(a2))
         
-        self.assertEqual(aux2(ADVar(0,0)).val, 0.5)
+        self.assertEqual(aux2(ADVar(0,0)).getVal(), 0.5)
         self.assertEqual(aux2(ADVar(0,0)).getDeriv(0), -0.25)
         
 
