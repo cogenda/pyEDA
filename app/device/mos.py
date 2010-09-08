@@ -12,7 +12,7 @@ from pyEDA.Device.DDEqns import *
 import numpy as np
 import scipy
 
-import PhysUnit as Unit
+import pyEDA.Device.PhysUnit as Unit
 
 class SiO2(InsulatorMaterial):
     def __init__(self):
