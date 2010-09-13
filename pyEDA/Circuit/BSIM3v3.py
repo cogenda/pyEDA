@@ -678,7 +678,24 @@ class MOSBSim3v3(CircuitElem):
         else:
             Ibd = 0.0
 
-        return (Ids+Isub-Ibd, -Ids-Ibs, Isub+Ibs+Ibd)
+        #res = [Ids+Isub-Ibd, -Ids-Ibs, Isub+Ibs+Ibd]  # Id, Is, Isub
+        res = []
+        for v in output:
+            if v=='Id':
+                res.append(Ids+Isub-Ibd)
+            elif v=='Is':
+                res.append(-Ids-Ibs)
+            elif v=='Isub':
+                res.append(Isub+Ibs+Ibd)
+            elif v=='Vth':
+                res.append(Vth)
+            elif v=='fac_n':
+                res.append(fac_n)
+            elif v=='Vgsteff':
+                res.append(Vgsteff)
+            elif v=='Cox':
+                res.append(Cox)
+        return tuple(res)
 
     def calcFunJac(self, state):
         VD, VG, VS, VB = state.getVars(self.varIdx)
@@ -749,6 +766,8 @@ if __name__=='__main__':
                 Vgs = 0.05*k
                 Id, Is, Isub = mos._DC_Curr(Vgs,Vds,Vbs)
                 print "%15g %15g %15g %15g %15g" % (Vgs, Vds, Vbs, Id, Isub)
+                Vth, fac_n = mos._DC_Curr(Vgs,Vds,Vbs,output=('Vth','fac_n'))
+                print '******', Vth, fac_n
 
 #    for j in xrange(37):
 #        Vbs = 0.
