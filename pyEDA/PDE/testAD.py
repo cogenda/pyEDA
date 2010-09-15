@@ -4,10 +4,7 @@ Created on Jun 12, 2009
 @author: hash
 '''
 import unittest
-try:
-  from advar import *
-except Exception:
-  from AutoDeriv import *
+from AutoDeriv import *
 import math
 
 class Test(unittest.TestCase):
@@ -222,6 +219,20 @@ class Test(unittest.TestCase):
         
         self.assertEqual(aux2(ADVar(0,0)).getVal(), 0.5)
         self.assertEqual(aux2(ADVar(0,0)).getDeriv(0), -0.25)
+
+    def testErf(self):
+        x = ADVar(0.0, 0)
+        self.assertAlmostEqual(erf(x).getVal(),  0.0)
+        self.assertAlmostEqual(erfc(x).getVal(), 1.0)
+
+        x = ADVar(0.1, 0)
+        self.assertAlmostEqual(erf(x).getVal(),  0.1124629)
+        self.assertAlmostEqual(erfc(x).getVal(), 0.8875371)
+
+        x = ADVar(1.234, 0)
+        y = erf(x)+erfc(x)
+        self.assertAlmostEqual(y.getVal(), 1.0)
+        self.assertAlmostEqual(y.getDeriv(0), 0.0)
         
 
 if __name__ == "__main__":

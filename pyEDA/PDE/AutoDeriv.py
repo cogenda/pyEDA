@@ -32,10 +32,11 @@ Currently supported operations are
 try:
   from advar import *
 except Exception:
-  __all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'sqrt', 'Pow', 'aux1', 'aux2', 'mapADVar']
+  __all__=['ADVar', 'sin', 'cos', 'exp', 'log', 'sqrt', 'Pow', 'aux1', 'aux2', 'erf', 'erfc', 'mapADVar']
   
   import sys
   import math
+  from scipy import special
   
   def _calcDeriv (a, b, func):
       '''
@@ -536,7 +537,33 @@ except Exception:
           r.deriv.append( (i, pd*dx) )
   
       return r
-  
+
+  def erf(x):
+      ''' erf(x), x is ADVar or scalar '''
+      if not isinstance(x, ADVar):
+          return special.erf(x)
+      
+      r = ADVar()
+      r.val = special.erf(float(x))
+      tmp = 2./math.sqrt(math.pi) * math.exp(-float(x)*float(x))
+      
+      for i,dx in x.deriv:
+          r.deriv.append( (i, tmp*dx) )
+      return r
+ 
+  def erfc(x):
+      ''' erfc(x), x is ADVar or scalar '''
+      if not isinstance(x, ADVar):
+          return special.erfc(x)
+      
+      r = ADVar()
+      r.val = special.erfc(float(x))
+      tmp = - 2./math.sqrt(math.pi) * math.exp(-float(x)*float(x))
+      
+      for i,dx in x.deriv:
+          r.deriv.append( (i, tmp*dx) )
+      return r
+ 
   def mapADVar(advar, map):
       r = ADVar(advar.val)
       for i,d in advar.getDeriv():
