@@ -9,6 +9,7 @@ __all__ = ['ImplDeriv']
 from AutoDeriv import *
 from NLEqns import *
 from scipy import linalg
+import numpy as np
 
 class ImplDeriv(NLEqns):
     def __init__(self, m, p):
@@ -24,6 +25,7 @@ class ImplDeriv(NLEqns):
         #if n > 20:  # we only plan to handle small implicit problems
         #    raise ValueError
         self.state = NLEqnState(n)
+        self.Jinv = None
 
     def setIndepVars(self, vars):
         '''
@@ -39,17 +41,35 @@ class ImplDeriv(NLEqns):
 
         self.iVars = vars
 
-    def getDeriv(self):
+    def getDeriv(self, vars=None):
         '''
-        call solve() before calling this function.
+        Note: call solve() before calling this function.
+        @param: vars list of dependent variable indeces
         @return: dependent variables as list of ADVar
         '''
-        res = self.sizeM * [ADVar()]
-        Jinv = linalg.inv(self.state.J.todense())
-        for i in xrange(self.sizeM):
+        res = []
+
+        if self.Jinv==None:
+            self.Jinv = linalg.inv(self.state.J.todense())
+        Jinv=self.Jinv
+
+        if vars==None:
+            rows=range(self.sizeM)
+        elif isinstance(vars, list): 
+            rows=vars
+        elif isinstance(vars, int): 
+            rows=[vars]
+        else:
+            raise TypeError
+
+        for i in rows:
+            v = ADVar()
             for j in xrange(self.sizeP):
-                res[i] += Jinv[i,j] * self.iVars[j]
-            res[i].setVal(self.state.x[i])
+                v += Jinv[i,j] * self.iVars[j]
+            v.setVal(self.state.x[i])
+            res.append(v)
+        if len(res)==1:
+            return res[0]
         return res
 
     def initGuess(self):
@@ -62,4 +82,7 @@ class ImplDeriv(NLEqns):
             p = self.sizeM + i
             self.state.setFunJac(i, self.state.getVar(p) - self.iVars[i].getVal())
 
+    def solve(self):
+        self.Jinv = None
+        super(ImplDeriv,self).solve()
 
