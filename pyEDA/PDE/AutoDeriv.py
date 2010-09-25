@@ -330,7 +330,7 @@ except Exception:
       
       r = ADVar()
       if x<EXP_XMAX:
-          r.val = math.exp(x)
+          r.val = math.exp(float(x))
       else:
           r.val = EXP_YMAX
       for i,dx in x.deriv:
@@ -341,10 +341,10 @@ except Exception:
   def log(x):
       ''' log(x), x is ADVar or scalar '''
       if not isinstance(x, ADVar):
-          return math.log(x)
+          return math.log(float(x))
       
       r = ADVar()
-      r.val = math.log(x)
+      r.val = math.log(float(x))
       
       for i,dx in x.deriv:
           if x.val>0 or x.val==0 and dx>=0 :
@@ -356,11 +356,11 @@ except Exception:
   def sin(x):
       ''' sin(x), x is ADVar or scalar '''
       if not isinstance(x, ADVar):
-          return math.sin(x)
+          return math.sin(float(x))
       
       r = ADVar()
-      r.val = math.sin(x)
-      rcos = math.cos(x)
+      r.val = math.sin(float(x))
+      rcos = math.cos(float(x))
       
       for i,dx in x.deriv:
           r.deriv.append( (i, rcos*dx) )
@@ -369,11 +369,11 @@ except Exception:
   def cos(x):
       ''' cos(x), x is ADVar or scalar '''
       if not isinstance(x, ADVar):
-          return math.sin(x)
+          return math.sin(float(x))
       
       r = ADVar()
-      r.val = math.cos(x)
-      rsin = math.sin(x)
+      r.val = math.cos(float(x))
+      rsin = math.sin(float(x))
       
       for i,dx in x.deriv:
           r.deriv.append( (i, -rsin*dx) )
@@ -382,10 +382,10 @@ except Exception:
   def sqrt(x):
       ''' square root of x'''
       if not isinstance(x, ADVar):
-          return math.sqrt(x)
+          return math.sqrt(float(x))
   
       r = ADVar()
-      t0 = math.sqrt(x)
+      t0 = math.sqrt(float(x))
       t1 = 1./(2.*t0)
   
       r.val = t0
@@ -406,7 +406,7 @@ except Exception:
       r = ADVar()
       r.val = pow(x, float(p))
   
-      tmp = math.log(x) * r.val
+      tmp = math.log(float(x)) * r.val
       for i,dx in p.deriv:
           r.deriv.append((i,tmp*dx))
       return r
