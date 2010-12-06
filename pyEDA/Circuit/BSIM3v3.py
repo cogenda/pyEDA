@@ -194,7 +194,6 @@ class MOSBSim3v3(CircuitElem):
 
         if not self.TOXM: self.TOXM = self.TOX
         if not self.DSUB: self.DSUB = self.DROUT
-        if self.U0>1.0: self.U0 *= 1e-4
         self.TNOM += 273.15
         self.TEMP += 273.15
 
@@ -262,6 +261,8 @@ class MOSBSim3v3(CircuitElem):
                     self.__dict__[k] += pdep*invLWeff0
 
         # }}}
+
+        if self.U0>1.0: self.U0 *= 1e-4
 
         # {{{ S/D Capacitance area calculation
         if self.CALCACM==1:
